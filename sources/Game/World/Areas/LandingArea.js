@@ -6,6 +6,7 @@ import { Area } from './Area.js'
 import gsap from 'gsap'
 import { MeshDefaultMaterial } from '../../Materials/MeshDefaultMaterial.js'
 import { LandingFlag } from './LandingFlag.js'
+import { LandingBranding } from './LandingBranding.js'
 
 export class LandingArea extends Area
 {
@@ -21,6 +22,7 @@ export class LandingArea extends Area
         this.setBonfire()
         this.setAchievement()
         this.setFlag()
+        this.setBranding()
     }
 
     setLetters()
@@ -260,6 +262,14 @@ export class LandingArea extends Area
     setFlag()
     {
         this.flag = new LandingFlag({
+            references: this.references,
+            hideables: this.objects.hideable
+        })
+    }
+
+    setBranding()
+    {
+        this.branding = new LandingBranding({
             references: this.references,
             hideables: this.objects.hideable
         })

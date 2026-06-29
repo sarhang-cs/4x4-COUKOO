@@ -58,8 +58,8 @@ export class LandingFlag
 
         this.anchor = {}
         this.anchor.position = lastLetter.position.clone()
-            .add(direction.clone().multiplyScalar(1.55))
-            .add(side.clone().multiplyScalar(- 0.95))
+            .add(direction.clone().multiplyScalar(1.05))
+            .add(side.clone().multiplyScalar(0.58))
         this.anchor.position.y = lastLetter.position.y - 0.02
 
         this.anchor.clothDirection = direction.clone().negate()
