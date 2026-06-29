@@ -78,22 +78,34 @@ export class Audio
         }
 
         const item = {}
-        item.howl = new Howl({
-            src: [ options.path ],
-            pool: 2,
-            autoplay: (this.initiated && options.autoplay) ?? false,
-            loop: options.loop ?? false,
-            volume: options.volume ?? 0.5,
-            preload: options.preload ?? true,
-            onloaderror: () =>
-            {
-                console.error(`Audio > Load error > ${options.path}`, options)
-            },
-            onend: () =>
-            {
-                item.playing = false
-            }
-        })
+        item.howl = null
+        item.createHowl = () =>
+        {
+            if(item.howl)
+                return item.howl
+
+            // Creating an AudioContext before a pointer/keyboard gesture triggers
+            // Chromium autoplay warnings. Construction and loading are deferred
+            // until Audio.init() has been reached from the intro interaction.
+            item.howl = new Howl({
+                src: [ options.path ],
+                pool: 2,
+                autoplay: false,
+                loop: options.loop ?? false,
+                volume: options.volume ?? 0.5,
+                preload: false,
+                onloaderror: () =>
+                {
+                    console.error(`Audio > Load error > ${options.path}`, options)
+                },
+                onend: () =>
+                {
+                    item.playing = false
+                }
+            })
+
+            return item.howl
+        }
         item.positions = options.positions ?? null
         if(item.positions !== null && !(item.positions instanceof Array))
             item.positions = [ item.positions ]
@@ -104,7 +116,7 @@ export class Audio
         item.lastPlay = -Infinity
         item.onPlaying = options.onPlaying ?? null
         item.onPlay = options.onPlay ?? null
-        item.loaded = options.preload ?? true
+        item.loaded = false
         item.autoplay = options.autoplay ?? false
         item.playing = (this.initiated && options.autoplay) ?? false
         item.id = group.items.length
@@ -116,11 +128,13 @@ export class Audio
                 return
             }
 
-            // Load
+            const howl = item.createHowl()
+
+            // Load only after Audio.init() has been called by a user gesture.
             if(!item.loaded)
             {
                 item.loaded = true
-                item.howl.load()
+                howl.load()
             }
 
             // Anti spam
@@ -135,7 +149,7 @@ export class Audio
                 item.onPlay(item, ...parameters)
                 
             // Play
-            item.howl.play()
+            howl.play()
 
             // Save last play for anti spam
             item.lastPlay = this.game.ticker.elapsed
@@ -731,7 +745,7 @@ export class Audio
 
                 // Positional and distance fade
                 let distanceFadeMultiplier = 1
-                if(item.positions && item.howl.playing())
+                if(item.howl && item.positions && item.howl.playing())
                 {
                     let closestDistance = Infinity
                     let closestPosition = null
@@ -762,11 +776,14 @@ export class Audio
                 }
 
                 // Rate (apply global too)
+                if(!item.howl)
+                    continue
+
                 item.howl.rate(clamp(item.rate * this.globalRate, 0.5, 4))
 
                 // Volume
                 const volume = item.volume * distanceFadeMultiplier
-                item.howl.volume(item.volume * distanceFadeMultiplier)
+                item.howl.volume(volume)
 
                 item.howl.mute(volume < 0.01)
             }

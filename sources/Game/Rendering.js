@@ -30,13 +30,32 @@ export class Rendering
         this.game.viewport.events.on('change', () => this.resize())
     }
 
+    async canUseWebGPU()
+    {
+        // Some mobile Chromium builds expose navigator.gpu while the provider is
+        // still disabled or incomplete. Do not initialise it there: Three.js would
+        // emit a context-provider error before falling back to WebGL.
+        if(this.isMobile || !navigator.gpu?.requestAdapter)
+            return false
+
+        try
+        {
+            const adapter = await navigator.gpu.requestAdapter({ powerPreference: 'high-performance' })
+            return Boolean(adapter)
+        }
+        catch(error)
+        {
+            return false
+        }
+    }
+
     async setRenderer()
     {
-        const supportsWebGPU = typeof navigator.gpu !== 'undefined'
+        const useWebGPU = await this.canUseWebGPU()
         this.renderer = new THREE.WebGPURenderer({
             canvas: this.game.canvasElement,
             powerPreference: 'high-performance',
-            forceWebGL: !supportsWebGPU,
+            forceWebGL: !useWebGPU,
             antialias: !this.isMobile,
         })
         this.renderer.setSize(this.game.viewport.width, this.game.viewport.height)

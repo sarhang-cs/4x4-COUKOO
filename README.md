@@ -6,7 +6,7 @@
 
 ### Interactive 3D Driving World
 
-**Developer: Sarhang Salah · SARHANG IO · 2026**
+**Developer: Sarhang Salah · SARHANG IO · 2026 · v1.4.0**
 
 <img src="./static/readme/4x4-coukoo-cover.png" alt="4X4 COUKOO cover artwork" width="100%" />
 
@@ -285,3 +285,9 @@ Email: [sarhang.pasha123@gmail.com](mailto:sarhang.pasha123@gmail.com)
 [Back to top](#top)
 
 </div>
+
+## Rendering Compatibility
+
+- Mobile browsers use the WebGL fallback directly when WebGPU is unavailable, avoiding experimental WebGPU initialisation noise.
+- WebGL fallback uploads dynamic uniform buffers safely at their exact size, preventing repeated GL uniform-buffer warnings.
+- Audio objects are created only after the first start interaction, following browser autoplay requirements.

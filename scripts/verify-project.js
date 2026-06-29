@@ -86,7 +86,7 @@ for(const file of [ 'static/ui/flags/ku.png', 'static/ui/flags/ku.webp' ])
 const packageJson = JSON.parse(readFileSync(join(projectRoot, 'package.json'), 'utf8'))
 assert(packageJson.name === '4x4-coukoo', 'package.json must use the 4x4-coukoo package name')
 assert(packageJson.license === 'MIT', 'package.json must declare the MIT license')
-assert(packageJson.version === '1.3.0', 'package.json must use version 1.3.0')
+assert(packageJson.version === '1.4.0', 'package.json must use version 1.4.0')
 assert(!existsSync(join(projectRoot, 'scripts/compress.js')), 'Unused compression script must be removed')
 
 const oldBrandPattern = new RegExp(
@@ -136,7 +136,8 @@ if(existsSync(areasGlbPath))
 
 
 const renderingSource = readFileSync(join(sourcesRoot, 'Game/Rendering.js'), 'utf8')
-assert(renderingSource.includes('forceWebGL: !supportsWebGPU'), 'Renderer must select WebGL directly when WebGPU is unavailable')
+assert(renderingSource.includes('canUseWebGPU()'), 'Renderer must verify WebGPU availability before initialising it')
+assert(renderingSource.includes('forceWebGL: !useWebGPU'), 'Renderer must select WebGL directly when WebGPU is unavailable')
 assert(renderingSource.includes('this.usePostprocessing = true'), 'Renderer must preserve post-processing in both quality modes')
 assert(renderingSource.includes('profile.depthOfField'), 'Renderer must use the High/Low effects quality profile')
 assert(renderingSource.includes('this.scenePassColor.add(this.bloomPass)'), 'Low quality must retain bloom effects')
@@ -161,6 +162,13 @@ assert(vehicleSource.includes('this.steeringAmplitude = 0.88'), 'Vehicle precisi
 const flagSource = readFileSync(join(sourcesRoot, 'Game/World/Areas/LandingFlag.js'), 'utf8')
 assert(flagSource.includes('emissiveMap: this.texture'), 'Flag cloth emissive texture is missing')
 assert(flagSource.includes('segmentsX: 20'), 'Flag performance geometry configuration is missing')
+
+const audioSource = readFileSync(join(sourcesRoot, 'Game/Audio.js'), 'utf8')
+assert(audioSource.includes('item.createHowl'), 'Audio must defer Howl construction until interaction')
+assert(audioSource.includes('if(!item.howl)'), 'Audio update must support deferred sound instances')
+
+const uboPatchSource = readFileSync(join(projectRoot, 'scripts/patch-three-webgl-ubo.js'), 'utf8')
+assert(uboPatchSource.includes('4X4_COUKOO_WEBGL_UBO_FULL_UPLOAD'), 'WebGL UBO root fix is missing')
 
 const wavFiles = walk(staticRoot).filter((file) => file.endsWith('.wav'))
 assert(wavFiles.length === 0, `Unused WAV assets remain: ${wavFiles.length}`)
