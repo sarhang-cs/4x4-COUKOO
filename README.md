@@ -4,6 +4,13 @@
 
 # 4X4 COUKOO
 
+## v1.5.0 — Renderer Stability
+
+- Upgraded the renderer package to Three.js 0.185.0.
+- Replaced the previous full UBO upload workaround with a byte-capacity guard that preserves partial WebGL uploads unless a buffer grows.
+- No gameplay assets, audio, UI, vehicle physics, or graphics profiles were removed.
+
+
 ### Interactive 3D Driving World
 
 **Developer: Sarhang Salah · SARHANG IO · 2026 · v1.4.0**

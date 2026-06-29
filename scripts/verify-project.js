@@ -86,7 +86,8 @@ for(const file of [ 'static/ui/flags/ku.png', 'static/ui/flags/ku.webp' ])
 const packageJson = JSON.parse(readFileSync(join(projectRoot, 'package.json'), 'utf8'))
 assert(packageJson.name === '4x4-coukoo', 'package.json must use the 4x4-coukoo package name')
 assert(packageJson.license === 'MIT', 'package.json must declare the MIT license')
-assert(packageJson.version === '1.4.0', 'package.json must use version 1.4.0')
+assert(packageJson.dependencies.three === '0.185.0', 'package.json must pin Three.js 0.185.0 for the renderer guard')
+assert(packageJson.version === '1.5.0', 'package.json must use version 1.5.0')
 assert(!existsSync(join(projectRoot, 'scripts/compress.js')), 'Unused compression script must be removed')
 
 const oldBrandPattern = new RegExp(
@@ -167,8 +168,11 @@ const audioSource = readFileSync(join(sourcesRoot, 'Game/Audio.js'), 'utf8')
 assert(audioSource.includes('item.createHowl'), 'Audio must defer Howl construction until interaction')
 assert(audioSource.includes('if(!item.howl)'), 'Audio update must support deferred sound instances')
 
-const uboPatchSource = readFileSync(join(projectRoot, 'scripts/patch-three-webgl-ubo.js'), 'utf8')
-assert(uboPatchSource.includes('4X4_COUKOO_WEBGL_UBO_FULL_UPLOAD'), 'WebGL UBO root fix is missing')
+const uboPatchSource = readFileSync(join(projectRoot, 'scripts/patch-three-webgl-ubo-capacity.js'), 'utf8')
+assert(uboPatchSource.includes('4X4_COUKOO_WEBGL_UBO_CAPACITY_GUARD'), 'WebGL UBO capacity guard is missing')
+assert(uboPatchSource.includes('map._4x4UboByteLength'), 'Bind-group capacity tracking is missing')
+assert(uboPatchSource.includes('bindingData._4x4UboByteLength'), 'Direct binding capacity tracking is missing')
+assert(!existsSync(join(projectRoot, 'scripts/patch-three-webgl-ubo.js')), 'Legacy full-upload UBO patch must be removed')
 
 const wavFiles = walk(staticRoot).filter((file) => file.endsWith('.wav'))
 assert(wavFiles.length === 0, `Unused WAV assets remain: ${wavFiles.length}`)
