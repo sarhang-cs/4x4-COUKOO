@@ -1,27 +1,36 @@
 import * as THREE from 'three/webgpu'
-import { Pane } from 'tweakpane'
-import * as EssentialsPlugin from '@tweakpane/plugin-essentials'
-import * as CamerakitPlugin from '@tweakpane/plugin-camerakit'
 
+/**
+ * Tweakpane is useful only behind #debug. Loading it lazily keeps all debug
+ * tooling out of normal player sessions while preserving the same debug API.
+ */
 export class Debug
 {
     constructor()
     {
-        
         this.active = location.hash.match(/debug/i)
+        this.panel = null
+        this.ready = this.active ? this.createPanel() : Promise.resolve()
+    }
 
-        if(this.active)
+    async createPanel()
+    {
+        const [ paneModule, essentialsModule, camerakitModule ] = await Promise.all([
+            import('tweakpane'),
+            import('@tweakpane/plugin-essentials'),
+            import('@tweakpane/plugin-camerakit')
+        ])
+
+        const { Pane } = paneModule
+        this.panel = new Pane()
+        this.panel.registerPlugin(essentialsModule)
+        this.panel.registerPlugin(camerakitModule)
+
+        addEventListener('keydown', (event) =>
         {
-            this.panel = new Pane()
-            this.panel.registerPlugin(EssentialsPlugin)
-            this.panel.registerPlugin(CamerakitPlugin)
-
-            addEventListener('keydown', (event) =>
-            {
-                if(event.code === 'KeyH')
-                    this.panel.hidden = !this.panel.hidden
-            })
-        }
+            if(event.code === 'KeyH')
+                this.panel.hidden = !this.panel.hidden
+        })
     }
 
     addManualBinding(panel, object, property, settings, update, manual = false)
@@ -38,7 +47,7 @@ export class Debug
         {
             binding.instance = panel.addBinding(binding, 'manualValue', settings)
             binding.instance.on('change', () => { binding.manual = true })
-            
+
             this.addButtons(
                 panel,
                 {
@@ -64,8 +73,8 @@ export class Debug
 
     addThreeColorBinding(panel, object, label)
     {
-        return panel.addBinding({ color: object.getHex(THREE.SRGBColorSpace) }, 'color', { label: label, view: 'color' })
-                    .on('change', tweak => { object.set(tweak.value) })
+        return panel.addBinding({ color: object.getHex(THREE.SRGBColorSpace) }, 'color', { label: label })
+            .on('change', tweak => { object.set(tweak.value) })
     }
 
     addButtons(panel, buttons, title = '')
@@ -77,9 +86,7 @@ export class Debug
                 view: 'buttongrid',
                 size: [ buttonKeys.length, 1 ],
                 cells: (x, y) => ({
-                    title: [
-                        buttonKeys,
-                    ][y][x],
+                    title: [ buttonKeys ][y][x],
                 }),
                 label: title,
             })

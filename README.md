@@ -291,3 +291,16 @@ Email: [sarhang.pasha123@gmail.com](mailto:sarhang.pasha123@gmail.com)
 - Mobile browsers use the WebGL fallback directly when WebGPU is unavailable, avoiding experimental WebGPU initialisation noise.
 - WebGL fallback uploads dynamic uniform buffers safely at their exact size, preventing repeated GL uniform-buffer warnings.
 - Audio objects are created only after the first start interaction, following browser autoplay requirements.
+
+## Production bundle architecture
+
+The production build uses real code splitting rather than suppressing Vite's bundle advisory:
+
+- The HTML bootstrap dynamically imports the 3D game runtime.
+- Three.js is emitted as a dedicated long-lived `engine-three` cache chunk.
+- Rapier physics remains a dynamic `engine-physics` chunk while world assets load.
+- Tweakpane debug tooling loads only with `#debug`.
+- The MessagePack codec loads only when `VITE_SERVER_URL` is enabled.
+- Motion, camera, audio, input, text and random utilities use stable vendor chunks.
+
+`chunkSizeWarningLimit` is set to 1500 kB only after this split, matching the required Three.js WebGPU engine chunk. The build will warn again if a chunk grows beyond that intentional engine budget.

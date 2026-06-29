@@ -1,7 +1,13 @@
-import { decode, encode } from '@msgpack/msgpack'
-import { v4 as uuidv4 } from 'uuid'
 import { Events } from './Events.js'
 import { Game } from './Game.js'
+
+const createSessionId = () =>
+{
+    if(globalThis.crypto?.randomUUID)
+        return globalThis.crypto.randomUUID()
+
+    return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`
+}
 
 export class Server
 {
@@ -9,38 +15,68 @@ export class Server
     {
         this.game = Game.getInstance()
 
-        // Unique session ID
+        // Unique session ID. Native crypto removes uuid from the player bundle.
         this.uuid = localStorage.getItem('uuid')
         if(!this.uuid)
         {
-            this.uuid = uuidv4()
+            this.uuid = createSessionId()
             localStorage.setItem('uuid', this.uuid)
         }
 
         this.connected = false
         this.initData = null
         this.events = new Events()
+        this.codec = null
+        this.startPromise = null
         document.documentElement.classList.add('is-server-offline')
+    }
+
+    async loadCodec()
+    {
+        if(this.codec)
+            return this.codec
+
+        const { decode, encode } = await import('@msgpack/msgpack')
+        this.codec = { decode, encode }
+        return this.codec
     }
 
     start()
     {
-        if(import.meta.env.VITE_SERVER_URL)
-        {
-            // First connect attempt
-            this.connect()
-            
-            // Try connect
-            setInterval(() =>
+        if(this.startPromise)
+            return this.startPromise
+
+        if(!import.meta.env.VITE_SERVER_URL)
+            return Promise.resolve(false)
+
+        this.startPromise = this.loadCodec()
+            .then(() =>
             {
-                if(!this.connected)
-                    this.connect()
-            }, 2000)
-        }
+                this.connect()
+
+                setInterval(() =>
+                {
+                    if(!this.connected)
+                        this.connect()
+                }, 2000)
+
+                return true
+            })
+            .catch((error) =>
+            {
+                this.startPromise = null
+                console.warn('Server codec could not be loaded.', error)
+                return false
+            })
+
+        return this.startPromise
     }
 
     connect()
     {
+        if(!this.codec)
+            return
+
         this.socket = new WebSocket(import.meta.env.VITE_SERVER_URL)
         this.socket.binaryType = 'arraybuffer'
 
@@ -51,13 +87,11 @@ export class Server
             document.documentElement.classList.add('is-server-online')
             this.events.trigger('connected')
 
-            // On message
             this.socket.addEventListener('message', (message) =>
             {
                 this.onReceive(message)
             })
 
-            // Notification (only if been running for a while)
             if(this.game.ticker.elapsed > 10)
             {
                 const html = /* html */`
@@ -75,14 +109,12 @@ export class Server
                 )
             }
 
-            // On close
             this.socket.addEventListener('close', () =>
             {
                 document.documentElement.classList.add('is-server-offline')
                 document.documentElement.classList.remove('is-server-online')
                 this.connected = false
 
-                // Notification
                 const html = /* html */`
                     <div class="top">
                         <div class="title">Server disconnected</div>
@@ -96,7 +128,7 @@ export class Server
                     null,
                     'server-disconnected'
                 )
-                
+
                 this.events.trigger('disconnected')
             })
         })
@@ -105,8 +137,7 @@ export class Server
     onReceive(message)
     {
         const data = this.decode(message.data)
-    
-    
+
         if(this.initData === null)
             this.initData = data
 
@@ -119,15 +150,16 @@ export class Server
             return false
 
         this.socket.send(this.encode({ uuid: this.uuid, ...message }))
+        return true
     }
 
     decode(data)
     {
-        return decode(new Uint8Array(data))
+        return this.codec.decode(new Uint8Array(data))
     }
 
     encode(data)
     {
-        return encode(data)
+        return this.codec.encode(data)
     }
 }

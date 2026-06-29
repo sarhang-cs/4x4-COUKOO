@@ -1,6 +1,5 @@
 import * as THREE from 'three/webgpu'
 
-import { Debug } from './Debug.js'
 import { Inputs } from './Inputs/Inputs.js'
 import { Physics } from './Physics/Physics.js'
 import { Rendering } from './Rendering.js'
@@ -75,7 +74,9 @@ export class Game
 
         // First batch for intro
         this.scene = new THREE.Scene()
+        const { Debug } = await import('./Debug.js')
         this.debug = new Debug()
+        await this.debug.ready
         this.resourcesLoader = new ResourcesLoader()
         this.quality = new Quality()
         this.server = new Server()

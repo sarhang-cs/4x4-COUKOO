@@ -173,6 +173,27 @@ assert(uboPatchSource.includes('4X4_COUKOO_WEBGL_UBO_FULL_UPLOAD'), 'WebGL UBO r
 const wavFiles = walk(staticRoot).filter((file) => file.endsWith('.wav'))
 assert(wavFiles.length === 0, `Unused WAV assets remain: ${wavFiles.length}`)
 
+
+// Bundle architecture: preserve real lazy boundaries instead of only raising
+// Vite's warning threshold. These assertions keep the split strategy intact.
+const viteConfigSource = readFileSync(join(projectRoot, 'vite.config.js'), 'utf8')
+assert(viteConfigSource.includes('manualChunks'), 'Vite manual chunk strategy is missing')
+assert(viteConfigSource.includes("return 'engine-three'"), 'Three.js engine cache chunk is missing')
+assert(viteConfigSource.includes("return 'engine-physics'"), 'Rapier physics cache chunk is missing')
+assert(viteConfigSource.includes("chunkSizeWarningLimit: 1500"), 'Three.js engine size threshold is missing')
+
+const entrySource = readFileSync(join(sourcesRoot, 'index.js'), 'utf8')
+assert(entrySource.includes("await import('./Game/Game.js')"), 'Game runtime must load through a dynamic import')
+assert(entrySource.includes("await import('./threejs-override.js')"), 'Three override must load before the game runtime')
+
+const debugSource = readFileSync(join(sourcesRoot, 'Game/Debug.js'), 'utf8')
+assert(debugSource.includes("import('tweakpane')"), 'Debug tools must be lazy loaded')
+assert(!debugSource.includes("from 'tweakpane'"), 'Debug tools must not be statically imported')
+
+const serverSource = readFileSync(join(sourcesRoot, 'Game/Server.js'), 'utf8')
+assert(serverSource.includes("import('@msgpack/msgpack')"), 'Server codec must be lazy loaded')
+assert(!serverSource.includes("from 'uuid'"), 'Server must use native crypto UUIDs instead of bundling uuid')
+
 if(failures.length)
 {
     console.error('\nProject verification failed:\n')
