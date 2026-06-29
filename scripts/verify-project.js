@@ -87,7 +87,7 @@ const packageJson = JSON.parse(readFileSync(join(projectRoot, 'package.json'), '
 assert(packageJson.name === '4x4-coukoo', 'package.json must use the 4x4-coukoo package name')
 assert(packageJson.license === 'MIT', 'package.json must declare the MIT license')
 assert(packageJson.dependencies.three === '0.185.0', 'package.json must pin Three.js 0.185.0 for the renderer guard')
-assert(packageJson.version === '1.6.0', 'package.json must use version 1.6.0')
+assert(packageJson.version === '1.7.0', 'package.json must use version 1.7.0')
 assert(!existsSync(join(projectRoot, 'scripts/compress.js')), 'Unused compression script must be removed')
 
 const oldBrandPattern = new RegExp(
@@ -126,7 +126,27 @@ if(existsSync(areasGlbPath))
 
     const titleNodes = glbJson.nodes.filter((node) => /^refLettersPhysicalDynamic\d{3}$/.test(node.name ?? ''))
     assert(titleNodes.length === 7, `areas.glb must contain 7 SARHANG title meshes, found ${titleNodes.length}`)
-    assert(glbJson.nodes.some((node) => node.name === 'refLandingFlagAnchor'), 'areas.glb flag anchor is missing')
+    assert(!glbJson.nodes.some((node) => /^refLettersPhysicalDynamic\./.test(node.name ?? '')), 'areas.glb still contains disconnected legacy title nodes')
+    assert(glbJson.nodes.length === 732, `areas.glb must contain 732 nodes after cleanup, found ${glbJson.nodes.length}`)
+    assert(glbJson.meshes.length === 263, `areas.glb must contain 263 meshes after cleanup, found ${glbJson.meshes.length}`)
+
+    const sceneRoots = glbJson.scenes[glbJson.scene ?? 0].nodes ?? []
+    const reachableNodes = new Set()
+    const pendingNodes = [ ...sceneRoots ]
+    while(pendingNodes.length)
+    {
+        const nodeIndex = pendingNodes.pop()
+        if(reachableNodes.has(nodeIndex))
+            continue
+
+        reachableNodes.add(nodeIndex)
+        pendingNodes.push(...(glbJson.nodes[nodeIndex].children ?? []))
+    }
+    assert(reachableNodes.size === glbJson.nodes.length, `areas.glb contains ${glbJson.nodes.length - reachableNodes.size} disconnected node(s)`)
+
+    const landingChildren = (landing.children ?? []).map((index) => glbJson.nodes[index]?.name)
+    assert(landingChildren.includes('refLandingFlagAnchor'), 'areas.glb flag anchor is missing from the landing scene')
+    assert(landingChildren.filter((name) => /^refLettersPhysicalDynamic\d{3}$/.test(name ?? '')).length === 7, 'areas.glb landing scene must attach 7 SARHANG title meshes')
 
     for(const [index, view] of glbJson.bufferViews.entries())
     {
@@ -179,7 +199,9 @@ assert(uboPatchSource.includes('bindingData._4x4UboByteLength'), 'Direct binding
 assert(!existsSync(join(projectRoot, 'scripts/patch-three-webgl-ubo.js')), 'Legacy full-upload UBO patch must be removed')
 
 const wavFiles = walk(staticRoot).filter((file) => file.endsWith('.wav'))
+const mp3Files = walk(staticRoot).filter((file) => file.endsWith('.mp3'))
 assert(wavFiles.length === 0, `Unused WAV assets remain: ${wavFiles.length}`)
+assert(mp3Files.length === 88, `All 88 runtime MP3 assets must be preserved, found ${mp3Files.length}`)
 
 
 // Bundle architecture: preserve real lazy boundaries instead of only raising

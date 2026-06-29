@@ -4,7 +4,7 @@
 
 # 4X4 COUKOO
 
-## v1.6.0 — Desktop High / Ultra Quality
+## v1.7.0 — Final Release Cleanup & QA
 
 - High now uses a desktop-only adaptive render-resolution governor that reacts to real frame time.
 - Premium desktop hardware receives a higher internal render scale, 4K shadows, denser depth-of-field and richer bloom; mobile remains on the existing balanced path.
@@ -13,7 +13,7 @@
 
 ### Interactive 3D Driving World
 
-**Developer: Sarhang Salah · SARHANG IO · 2026 · v1.6.0**
+**Developer: Sarhang Salah · SARHANG IO · 2026 · v1.7.0**
 
 <img src="./static/readme/4x4-coukoo-cover.png" alt="4X4 COUKOO cover artwork" width="100%" />
 
@@ -44,6 +44,13 @@ The game is designed for mobile, tablet, and desktop browsers. It uses WebGPU wh
 | --- | --- |
 | <img src="./static/readme/4x4-coukoo-cover.png" alt="4X4 COUKOO world screenshot" width="100%" /> | <img src="./static/readme/4x4-coukoo-ui.png" alt="4X4 COUKOO menu and interface screenshot" width="100%" /> |
 
+
+## v1.7.0 Release Cleanup & QA
+
+- Removed only the disconnected legacy landing-title model data from `areas.glb`; the active **SARHANG** title, its physical colliders, and the Kurdistan flag anchor are preserved.
+- Added a repeatable `npm run release-check` gate that verifies source integrity, performs a production build, then checks the release output and critical asset inventory.
+- The release package contains no `node_modules` or generated `dist` directory. Vercel and Termux generate these from the locked dependency set.
+- The remaining Vite `engine-three` size message is an advisory for the required renderer cache chunk, not a runtime error. It remains visible rather than being hidden.
 
 ## 2026 Visual Quality Update
 

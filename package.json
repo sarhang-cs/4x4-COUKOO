@@ -1,6 +1,6 @@
 {
   "name": "4x4-coukoo",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "type": "module",
   "scripts": {
     "dev": "vite --mode development",
@@ -8,11 +8,12 @@
     "preview": "vite preview",
     "clean": "rm -rf dist",
     "verify": "node scripts/verify-project.js",
-    "postinstall": "node scripts/patch-three-webgl-ubo-capacity.js"
+    "postinstall": "node scripts/patch-three-webgl-ubo-capacity.js",
+    "release-check": "npm run verify && npm run build && node scripts/release-audit.js"
   },
   "author": "Sarhang Salah <sarhang.pasha123@gmail.com> (SARHANG IO)",
   "license": "MIT",
-  "description": "4X4 COUKOO — interactive 3D driving world by Sarhang Salah / SARHANG IO.",
+  "description": "4X4 COUKOO \u2014 interactive 3D driving world by Sarhang Salah / SARHANG IO.",
   "dependencies": {
     "@dimforge/rapier3d": "^0.17.3",
     "@msgpack/msgpack": "3.1.3",
