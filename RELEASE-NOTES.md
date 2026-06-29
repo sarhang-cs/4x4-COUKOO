@@ -1,19 +1,20 @@
-# 4X4 COUKOO v1.5.0 — Renderer Root Fix
+# 4X4 COUKOO v1.6.0 — Desktop High / Ultra Quality
 
-This release performs the renderer-stability stage only.
+This release completes the desktop-graphics quality stage without removing any world effect, audio asset, UI feature or gameplay system.
 
-- Pins Three.js to `0.185.0`.
-- Replaces the old all-frame UBO upload workaround with a capacity guard.
-- The guard re-uploads a uniform buffer only when its byte length grows; otherwise Three.js keeps its partial WebGL updates.
-- No assets, audio, gameplay, UI, vehicle physics, flag work, or High/Low profiles were removed.
-- Uses the public npm registry and Node `24.x` for Vercel.
+## What changed
 
-Validated before packaging:
+- High remains a single user-facing setting; desktop devices now receive an internal Balanced, High or Ultra profile after capability detection.
+- High desktop rendering starts above native scale on capable devices, subject to a strict render-pixel budget so 1440p and 4K displays do not allocate excessive frame buffers.
+- An adaptive-resolution governor samples real frame time every few seconds. It reduces internal scale only after sustained pressure and increases it only after sustained headroom.
+- Premium desktop profiles raise bloom quality, depth-of-field sampling, shadow quality, texture anisotropy and tone-mapping exposure.
+- Mobile High and Low profiles remain protected from desktop-only render scaling.
+
+## Validation
 
 ```bash
-npm install --offline --no-audit --no-fund
 npm run verify
 npm run build
 ```
 
-The build completes. Vite still reports the `engine-three` chunk as larger than 1500 kB; it is a non-blocking build advisory and is intentionally left visible for the later engine-loading refactor.
+Both commands passed before packaging. Vite still reports the required `engine-three` chunk as slightly above the 1500 kB advisory threshold. The application chunks are truly split; the remaining warning is not hidden and will be handled only by a future engine-loading refactor.

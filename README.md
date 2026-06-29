@@ -4,16 +4,16 @@
 
 # 4X4 COUKOO
 
-## v1.5.0 — Renderer Stability
+## v1.6.0 — Desktop High / Ultra Quality
 
-- Upgraded the renderer package to Three.js 0.185.0.
-- Replaced the previous full UBO upload workaround with a byte-capacity guard that preserves partial WebGL uploads unless a buffer grows.
-- No gameplay assets, audio, UI, vehicle physics, or graphics profiles were removed.
+- High now uses a desktop-only adaptive render-resolution governor that reacts to real frame time.
+- Premium desktop hardware receives a higher internal render scale, 4K shadows, denser depth-of-field and richer bloom; mobile remains on the existing balanced path.
+- No gameplay assets, audio, UI, vehicle physics, or effects were removed.
 
 
 ### Interactive 3D Driving World
 
-**Developer: Sarhang Salah · SARHANG IO · 2026 · v1.4.0**
+**Developer: Sarhang Salah · SARHANG IO · 2026 · v1.6.0**
 
 <img src="./static/readme/4x4-coukoo-cover.png" alt="4X4 COUKOO cover artwork" width="100%" />
 
@@ -48,10 +48,11 @@ The game is designed for mobile, tablet, and desktop browsers. It uses WebGPU wh
 ## 2026 Visual Quality Update
 
 - **High** keeps the full visual stack: depth-of-field, bloom, neon glow, dynamic lighting, water blur, rich shadows, and all motion effects.
-- On desktops, High now uses an adaptive **Balanced / High / Ultra** profile based on available CPU cores, reported memory, GPU capabilities, and display resolution. The UI remains only **High / Low**; the extra desktop tier is selected automatically.
-- Ultra-capable desktop hardware receives higher render resolution, 4K shadow maps, stronger multi-mip bloom, sharper texture filtering, and denser depth-of-field sampling.
+- On desktop, High now selects a hidden **Balanced / High / Ultra** profile from CPU cores, reported memory, GPU limits and actual frame time. The menu remains only **High / Low**.
+- Premium desktop hardware starts with a higher internal render scale, then automatically steps up or down in small increments to protect smooth frame pacing.
+- Ultra-capable desktop hardware receives a larger render-pixel budget, 4K shadow maps, 7-mip bloom, denser depth-of-field sampling, 16× texture filtering and AgX tone mapping for stronger neon highlight detail.
 - **Low** preserves the same world and visual language, while reducing only render scale, shadow resolution, bloom passes, and depth-of-field cost for smoother mobile play.
-- The browser's animation loop follows the display cadence, so compatible high-refresh desktop displays are not artificially capped by the game.
+- The browser's animation loop follows the display cadence; the adaptive governor uses observed frame time instead of assuming a fixed refresh rate.
 - WebGL fallback is selected directly when WebGPU is unavailable, preventing an unnecessary WebGPU initialization attempt.
 - The guarded Three.js WebGL uniform-buffer fix remains applied at install time for dynamic node buffers.
 - Vehicle steering remains tighter at low speed and progressively stabilized at higher speed.

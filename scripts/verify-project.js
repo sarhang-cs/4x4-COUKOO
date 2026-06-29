@@ -87,7 +87,7 @@ const packageJson = JSON.parse(readFileSync(join(projectRoot, 'package.json'), '
 assert(packageJson.name === '4x4-coukoo', 'package.json must use the 4x4-coukoo package name')
 assert(packageJson.license === 'MIT', 'package.json must declare the MIT license')
 assert(packageJson.dependencies.three === '0.185.0', 'package.json must pin Three.js 0.185.0 for the renderer guard')
-assert(packageJson.version === '1.5.0', 'package.json must use version 1.5.0')
+assert(packageJson.version === '1.6.0', 'package.json must use version 1.6.0')
 assert(!existsSync(join(projectRoot, 'scripts/compress.js')), 'Unused compression script must be removed')
 
 const oldBrandPattern = new RegExp(
@@ -143,12 +143,16 @@ assert(renderingSource.includes('this.usePostprocessing = true'), 'Renderer must
 assert(renderingSource.includes('profile.depthOfField'), 'Renderer must use the High/Low effects quality profile')
 assert(renderingSource.includes('this.scenePassColor.add(this.bloomPass)'), 'Low quality must retain bloom effects')
 assert(renderingSource.includes('applyTextureQuality()'), 'Adaptive texture quality is missing')
+assert(renderingSource.includes('updateAdaptiveResolution()'), 'Desktop adaptive resolution governor is missing')
+assert(renderingSource.includes('THREE.AgXToneMapping'), 'High desktop tone mapping is missing')
 
 const qualitySource = readFileSync(join(sourcesRoot, 'Game/Quality.js'), 'utf8')
 assert(qualitySource.includes("const STORAGE_KEY = '4x4-coukoo-quality'"), 'Quality preference persistence is missing')
 assert(qualitySource.includes('getProfile(level = this.level)'), 'High/Low quality profiles are missing')
 assert(qualitySource.includes("tier: ultraDesktop ? 'ultra'"), 'Adaptive desktop High profile is missing')
 assert(qualitySource.includes('shadowMapSize: 4096'), 'Ultra desktop shadow quality is missing')
+assert(qualitySource.includes('renderScaleInitial: 1.45'), 'Ultra desktop supersampling profile is missing')
+assert(qualitySource.includes('adaptiveResolution: true'), 'Desktop adaptive resolution profile is missing')
 
 const lightingSource = readFileSync(join(sourcesRoot, 'Game/Ligthing.js'), 'utf8')
 assert(lightingSource.includes('applyQualityProfile()'), 'Lighting profile updates are missing')

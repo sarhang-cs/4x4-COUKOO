@@ -5,6 +5,8 @@ import { Game } from './Game.js'
 import { cheapDOF } from './Passes/cheapDOF.js'
 import { Inspector } from 'three/addons/inspector/Inspector.js'
 
+const clamp = (value, min, max) => Math.max(min, Math.min(value, max))
+
 export class Rendering
 {
     constructor()
@@ -15,7 +17,14 @@ export class Rendering
         this.usePostprocessing = true
         this.pixelRatioLimit = 1
         this.pixelRatioFloor = 0.75
+        this.renderScale = 1
+        this.activePixelRatio = 0
         this.textureQualityDirty = true
+        this.performance = {
+            lastAdjustmentElapsed: 0,
+            slowWindows: 0,
+            fastWindows: 0,
+        }
 
         if(this.game.debug.active)
         {
@@ -26,6 +35,7 @@ export class Rendering
     start()
     {
         this.setStats()
+        this.game.ticker.events.on('tick', () => this.updateAdaptiveResolution(), 997)
         this.game.ticker.events.on('tick', () => this.render(), 998)
         this.game.viewport.events.on('change', () => this.resize())
     }
@@ -62,6 +72,8 @@ export class Rendering
         this.renderer.sortObjects = false
         this.renderer.domElement.classList.add('experience')
         this.renderer.shadowMap.enabled = true
+        this.renderer.shadowMap.type = THREE.PCFSoftShadowMap
+        this.renderer.outputColorSpace = THREE.SRGBColorSpace
         this.renderer.setOpaqueSort((a, b) => a.renderOrder - b.renderOrder)
         this.renderer.setTransparentSort((a, b) => a.renderOrder - b.renderOrder)
 
@@ -107,9 +119,23 @@ export class Rendering
         const profile = this.game.quality.getProfile()
         this.pixelRatioLimit = profile.pixelRatioLimit
         this.pixelRatioFloor = profile.pixelRatioFloor
+        this.renderScale = profile.renderScaleInitial
+        this.performance.lastAdjustmentElapsed = this.game.ticker?.elapsed ?? 0
+        this.performance.slowWindows = 0
+        this.performance.fastWindows = 0
         this.textureQualityDirty = true
+
         if(this.renderer)
+        {
+            // High desktop uses AgX to preserve highlight detail around neon and
+            // emissive materials while avoiding clipped white areas.
+            this.renderer.toneMapping = profile.level === 0 && !this.isMobile
+                ? THREE.AgXToneMapping
+                : THREE.NoToneMapping
+            this.renderer.toneMappingExposure = profile.toneMappingExposure
             this.applyPixelRatio()
+        }
+
         if(!this.bloomPass || !this.postProcessing)
             return
 
@@ -130,9 +156,74 @@ export class Rendering
 
     applyPixelRatio()
     {
+        if(!this.renderer)
+            return
+
+        const profile = this.game.quality.getProfile()
         const nativePixelRatio = this.game.viewport.pixelRatioPure ?? this.game.viewport.pixelRatio
-        const pixelRatio = Math.min(Math.max(nativePixelRatio, this.pixelRatioFloor), this.pixelRatioLimit)
-        this.renderer.setPixelRatio(Math.max(0.75, pixelRatio))
+        const viewportPixels = Math.max(1, this.game.viewport.width * this.game.viewport.height)
+        const budgetPixelRatio = Math.sqrt(profile.maxRenderPixels / viewportPixels)
+        const maximum = Math.max(0.75, Math.min(profile.pixelRatioLimit, budgetPixelRatio))
+        const minimum = Math.min(maximum, Math.max(0.75, profile.pixelRatioFloor))
+        const desired = nativePixelRatio * this.renderScale
+        const pixelRatio = clamp(desired, minimum, maximum)
+
+        if(Math.abs(pixelRatio - this.activePixelRatio) < 0.01)
+            return
+
+        this.activePixelRatio = pixelRatio
+        this.renderer.setPixelRatio(pixelRatio)
+    }
+
+    updateAdaptiveResolution()
+    {
+        const profile = this.game.quality.getProfile()
+
+        if(!profile.adaptiveResolution || document.visibilityState === 'hidden')
+            return
+
+        const elapsed = this.game.ticker.elapsed
+        if(elapsed < 5 || elapsed - this.performance.lastAdjustmentElapsed < 2.5)
+            return
+
+        const frameTime = (this.game.ticker.deltaAverage ?? this.game.ticker.delta) * 1000
+        if(!Number.isFinite(frameTime) || frameTime <= 0)
+            return
+
+        this.performance.lastAdjustmentElapsed = elapsed
+
+        if(frameTime > profile.targetFrameTime * 1.18)
+        {
+            this.performance.slowWindows++
+            this.performance.fastWindows = 0
+
+            if(this.performance.slowWindows >= 2 && this.renderScale > profile.renderScaleMin)
+            {
+                this.renderScale = Math.max(profile.renderScaleMin, this.renderScale - 0.08)
+                this.performance.slowWindows = 0
+                this.applyPixelRatio()
+            }
+
+            return
+        }
+
+        if(frameTime < profile.targetFrameTime * 0.72)
+        {
+            this.performance.fastWindows++
+            this.performance.slowWindows = 0
+
+            if(this.performance.fastWindows >= 3 && this.renderScale < profile.renderScaleMax)
+            {
+                this.renderScale = Math.min(profile.renderScaleMax, this.renderScale + 0.05)
+                this.performance.fastWindows = 0
+                this.applyPixelRatio()
+            }
+
+            return
+        }
+
+        this.performance.slowWindows = 0
+        this.performance.fastWindows = 0
     }
 
     applyTextureQuality()
@@ -197,6 +288,8 @@ export class Rendering
             this.stats.feed.triangles = this.renderer.info.render.triangles.toLocaleString()
             this.stats.feed.geometries = this.renderer.info.memory.geometries.toLocaleString()
             this.stats.feed.textures = this.renderer.info.memory.textures.toLocaleString()
+            this.stats.feed.renderScale = this.renderScale.toFixed(2)
+            this.stats.feed.pixelRatio = this.activePixelRatio.toFixed(2)
         }
         this.stats.update()
         if(this.game.debug.active)
@@ -210,6 +303,7 @@ export class Rendering
     resize()
     {
         this.renderer.setSize(this.game.viewport.width, this.game.viewport.height)
+        this.activePixelRatio = 0
         this.applyPixelRatio()
     }
 
