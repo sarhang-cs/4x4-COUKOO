@@ -109,7 +109,7 @@ Use these values when importing the repository:
 
 ```text
 Framework Preset: Vite
-Install Command: npm ci --no-audit --no-fund
+Install Command: npm install --no-audit --no-fund
 Build Command: npm run build
 Output Directory: dist
 ```
