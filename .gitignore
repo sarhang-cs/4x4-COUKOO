@@ -1,0 +1,13 @@
+.DS_Store
+node_modules/
+dist/
+.vercel/
+.env*
+!.env.example
+.autosave/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.zip
+.env
