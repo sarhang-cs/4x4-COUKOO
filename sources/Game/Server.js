@@ -1,4 +1,4 @@
-import msgpack from 'msgpack-lite'
+import { decode, encode } from '@msgpack/msgpack'
 import { v4 as uuidv4 } from 'uuid'
 import { Events } from './Events.js'
 import { Game } from './Game.js'
@@ -123,11 +123,11 @@ export class Server
 
     decode(data)
     {
-        return msgpack.decode(new Uint8Array(data))
+        return decode(new Uint8Array(data))
     }
 
     encode(data)
     {
-        return msgpack.encode(data)
+        return encode(data)
     }
 }
