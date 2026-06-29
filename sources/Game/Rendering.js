@@ -14,6 +14,8 @@ export class Rendering
         this.isWebGLFallback = false
         this.usePostprocessing = true
         this.pixelRatioLimit = 1
+        this.pixelRatioFloor = 0.75
+        this.textureQualityDirty = true
 
         if(this.game.debug.active)
         {
@@ -35,7 +37,7 @@ export class Rendering
             canvas: this.game.canvasElement,
             powerPreference: 'high-performance',
             forceWebGL: !supportsWebGPU,
-            antialias: !this.isMobile && this.game.viewport.pixelRatio <= 2,
+            antialias: !this.isMobile,
         })
         this.renderer.setSize(this.game.viewport.width, this.game.viewport.height)
         this.renderer.sortObjects = false
@@ -85,6 +87,8 @@ export class Rendering
     {
         const profile = this.game.quality.getProfile()
         this.pixelRatioLimit = profile.pixelRatioLimit
+        this.pixelRatioFloor = profile.pixelRatioFloor
+        this.textureQualityDirty = true
         if(this.renderer)
             this.applyPixelRatio()
         if(!this.bloomPass || !this.postProcessing)
@@ -94,6 +98,11 @@ export class Rendering
         this.bloomPass.threshold.value = profile.bloomThreshold
         this.bloomPass.strength.value = profile.bloomStrength
         this.bloomPass.smoothWidth.value = profile.bloomSmoothWidth
+        this.bloomPass.radius.value = profile.bloomRadius
+        this.cheapDOFPass.repeats.value = profile.dofRepeats
+        this.cheapDOFPass.amount.value = profile.dofAmount
+        this.cheapDOFPass.start.value = profile.dofStart
+        this.cheapDOFPass.end.value = profile.dofEnd
         this.postProcessing.outputNode = profile.depthOfField
             ? this.cheapDOFPass.add(this.bloomPass)
             : this.scenePassColor.add(this.bloomPass)
@@ -102,8 +111,61 @@ export class Rendering
 
     applyPixelRatio()
     {
-        const pixelRatio = Math.min(this.game.viewport.pixelRatio, this.pixelRatioLimit)
+        const nativePixelRatio = this.game.viewport.pixelRatioPure ?? this.game.viewport.pixelRatio
+        const pixelRatio = Math.min(Math.max(nativePixelRatio, this.pixelRatioFloor), this.pixelRatioLimit)
         this.renderer.setPixelRatio(Math.max(0.75, pixelRatio))
+    }
+
+    applyTextureQuality()
+    {
+        if(!this.textureQualityDirty || !this.game.resources)
+            return
+
+        const profile = this.game.quality.getProfile()
+        const maxAnisotropy = this.renderer.getMaxAnisotropy?.() ?? this.renderer.capabilities?.getMaxAnisotropy?.() ?? profile.textureAnisotropy
+        const anisotropy = Math.max(1, Math.min(profile.textureAnisotropy, maxAnisotropy))
+        const visited = new Set()
+
+        const applyTexture = (texture) =>
+        {
+            if(!texture?.isTexture || visited.has(texture))
+                return
+
+            visited.add(texture)
+
+            if(texture.anisotropy !== anisotropy)
+            {
+                texture.anisotropy = anisotropy
+                texture.needsUpdate = true
+            }
+        }
+
+        const applyMaterial = (material) =>
+        {
+            const materials = Array.isArray(material) ? material : [ material ]
+
+            for(const item of materials)
+            {
+                if(!item)
+                    continue
+
+                for(const value of Object.values(item))
+                    applyTexture(value)
+            }
+        }
+
+        for(const resource of Object.values(this.game.resources))
+        {
+            applyTexture(resource)
+
+            resource?.scene?.traverse((child) =>
+            {
+                if(child.isMesh)
+                    applyMaterial(child.material)
+            })
+        }
+
+        this.textureQualityDirty = false
     }
 
     setStats()
@@ -134,6 +196,7 @@ export class Rendering
 
     render()
     {
+        this.applyTextureQuality()
         this.postProcessing.render()
         if(this.stats) this.stats.update()
         if(this.game.monitoring?.stats)

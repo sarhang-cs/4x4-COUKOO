@@ -20,8 +20,8 @@ export class Viewport
         this.height = bounding.height
         this.ratio = this.width / this.height
 
-        this.pixelRatioPure = window.devicePixelRatio
-        this.pixelRatioMax = this.isMobile ? 1.25 : 2
+        this.pixelRatioPure = Math.max(1, window.devicePixelRatio || 1)
+        this.pixelRatioMax = this.isMobile ? 1.5 : 3
         this.pixelRatio = Math.min(this.pixelRatioPure, this.pixelRatioMax)
     }
 

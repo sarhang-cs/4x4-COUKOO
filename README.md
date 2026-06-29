@@ -40,11 +40,12 @@ The game is designed for mobile, tablet, and desktop browsers. It uses WebGPU wh
 
 ## 2026 Visual Quality Update
 
-- **High** restores the complete visual stack: depth-of-field, full bloom, richer glow, higher shadow resolution, motion-driven lighting, water blur, and the original visual density.
-- **Low** keeps the same world effects and bloom, while removing only the expensive depth-of-field pass, using fewer bloom passes, lower shadow resolution, and a smaller render target for smoother mobile play.
-- The graphics choice is stored locally on each device. Desktop starts on High; constrained mobile devices start on Low and can switch to High in Settings at any time.
+- **High** keeps the full visual stack: depth-of-field, bloom, neon glow, dynamic lighting, water blur, rich shadows, and all motion effects.
+- On desktops, High now uses an adaptive **Balanced / High / Ultra** profile based on available CPU cores, reported memory, GPU capabilities, and display resolution. The UI remains only **High / Low**; the extra desktop tier is selected automatically.
+- Ultra-capable desktop hardware receives higher render resolution, 4K shadow maps, stronger multi-mip bloom, sharper texture filtering, and denser depth-of-field sampling.
+- **Low** preserves the same world and visual language, while reducing only render scale, shadow resolution, bloom passes, and depth-of-field cost for smoother mobile play.
+- The browser's animation loop follows the display cadence, so compatible high-refresh desktop displays are not artificially capped by the game.
 - WebGL fallback is selected directly when WebGPU is unavailable, preventing an unnecessary WebGPU initialization attempt.
-- Unused HTML preload hints were removed to prevent browser console noise when those assets are loaded later by the game.
 - The guarded Three.js WebGL uniform-buffer fix remains applied at install time for dynamic node buffers.
 - Vehicle steering remains tighter at low speed and progressively stabilized at higher speed.
 - The Kurdistan flag keeps its optimized cloth mesh, bright emissive fabric treatment, and GLB-authored anchor beside the final `G`.
