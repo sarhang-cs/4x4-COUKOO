@@ -1,6 +1,8 @@
 import * as THREE from 'three/webgpu'
 import { Game } from '../../Game.js'
 import { clamp, lerp, remapClamp } from '../../utilities/maths.js'
+import { Menu } from '../../Menu.js'
+import { Modals } from '../../Modals.js'
 
 const FLAG_SIZE = {
     width: 1.28,
@@ -34,36 +36,18 @@ export class LandingFlag
     constructor(options = {})
     {
         this.game = Game.getInstance()
-        this.references = options.references
+        this.area = options.area
+        this.anchor = options.anchor
         this.hideables = options.hideables
 
-        this.setAnchor()
+        if(!this.anchor)
+            throw new Error('Landing flag anchor is missing from areas.glb')
+
         this.setAudio()
         this.setTexture()
         this.setVisual()
         this.setPhysics()
         this.setUpdates()
-    }
-
-    setAnchor()
-    {
-        const letters = [...this.references.items.get('letters')]
-
-        const direction = letters.at(- 1).position.clone().sub(letters[0].position)
-        direction.y = 0
-        direction.normalize()
-
-        const side = new THREE.Vector3(- direction.z, 0, direction.x).normalize()
-        const lastLetter = letters.at(- 1)
-
-        this.anchor = {}
-        this.anchor.position = lastLetter.position.clone()
-            .add(direction.clone().multiplyScalar(0.72))
-            .add(side.clone().multiplyScalar(-1.28))
-        this.anchor.position.y = lastLetter.position.y - 0.02
-
-        this.anchor.clothDirection = direction.clone().negate()
-        this.anchor.rotation = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(1, 0, 0), this.anchor.clothDirection)
     }
 
     setAudio()
@@ -125,11 +109,6 @@ export class LandingFlag
         context.fillStyle = '#f4c537'
         context.beginPath()
         context.arc(0, 0, sunRadius, 0, Math.PI * 2)
-        context.fill()
-
-        context.fillStyle = '#f7d55b'
-        context.beginPath()
-        context.arc(0, 0, sunRadius * 0.65, 0, Math.PI * 2)
         context.fill()
         context.restore()
 
@@ -218,7 +197,7 @@ export class LandingFlag
             {
                 type: 'fixed',
                 position: this.anchor.position,
-                rotation: this.anchor.rotation,
+                rotation: this.anchor.quaternion,
                 friction: 0.9,
                 colliders: [
                     {
@@ -231,12 +210,6 @@ export class LandingFlag
                         shape: 'cylinder',
                         parameters: [ POLE.height * 0.5, POLE.radius * 1.1 ],
                         position: new THREE.Vector3(0, POLE.height * 0.5, 0),
-                        category: 'object'
-                    },
-                    {
-                        shape: 'cuboid',
-                        parameters: [ FLAG_SIZE.width * 0.46, FLAG_SIZE.height * 0.42, 0.08 ],
-                        position: new THREE.Vector3(this.clothOffset.x, this.clothOffset.y, 0),
                         category: 'object'
                     }
                 ],
@@ -264,9 +237,23 @@ export class LandingFlag
 
     update()
     {
+        this.updateVisibility()
+
+        if(!this.group.visible)
+            return
+
         this.updateCloth()
         this.updateLighting()
         this.updateMaterial()
+    }
+
+    updateVisibility()
+    {
+        const menuClosed = this.game.menu.state === Menu.CLOSED
+        const modalsClosed = this.game.modals.state === Modals.CLOSED
+        const frustumVisible = !this.area.frustum || this.area.frustum.isIn
+
+        this.group.visible = this.area.isIn && frustumVisible && menuClosed && modalsClosed
     }
 
     updateCloth()

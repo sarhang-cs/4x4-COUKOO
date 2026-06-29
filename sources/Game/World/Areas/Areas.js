@@ -2,7 +2,6 @@ import { Game } from '../../Game.js'
 import { AltarArea } from './AltarArea.js'
 import { CookieArea } from './CookieArea.js'
 import { LandingArea } from './LandingArea.js'
-import { prepareLandingName } from './LandingName.js'
 import { ProjectsArea } from './ProjectsArea.js'
 import { LabArea } from './LabArea.js'
 import { CareerArea } from './CareerArea.js'
@@ -44,12 +43,7 @@ export class Areas
             for(const [ name, AreaClass ] of list)
             {
                 if(child.name.startsWith(name))
-                {
-                    if(name === 'landing')
-                        prepareLandingName(child)
-
                     this[name] = new AreaClass(child)
-                }
             }
         }
 

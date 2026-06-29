@@ -259,12 +259,14 @@ export class LandingArea extends Area
 
     setFlag()
     {
+        const anchor = this.references.items.get('landingFlagAnchor')?.[0]
+
         this.flag = new LandingFlag({
-            references: this.references,
+            area: this,
+            anchor: anchor,
             hideables: this.objects.hideable
         })
     }
-
 
     setAchievement()
     {

@@ -11,30 +11,30 @@
   },
   "author": "Sarhang Salah <sarhang.pasha123@gmail.com> (SARHANG IO)",
   "license": "MIT",
-  "description": "4X4 COUKOO — interactive 3D driving world by Sarhang Salah / SARHANG IO.",
+  "description": "4X4 COUKOO \u2014 interactive 3D driving world by Sarhang Salah / SARHANG IO.",
   "dependencies": {
-    "@dimforge/rapier3d": "0.17.3",
-    "@tweakpane/plugin-camerakit": "0.3.0",
-    "@tweakpane/plugin-essentials": "0.2.1",
-    "camera-controls": "3.1.2",
-    "dotenv": "17.4.2",
-    "emoji-regex": "10.6.0",
-    "gsap": "3.15.0",
-    "howler": "2.2.4",
-    "msgpack-lite": "0.1.26",
-    "normalize-wheel": "1.0.1",
-    "seedrandom": "3.0.5",
-    "stylus": "0.64.0",
-    "three": "0.183.2",
-    "tweakpane": "4.0.4",
-    "uuid": "11.1.1",
-    "vite": "7.3.6",
+    "@dimforge/rapier3d": "^0.17.3",
+    "@tweakpane/plugin-camerakit": "^0.3.0",
+    "@tweakpane/plugin-essentials": "^0.2.1",
+    "camera-controls": "^3.1.2",
+    "dotenv": "^17.4.2",
+    "emoji-regex": "^10.6.0",
+    "gsap": "^3.15.0",
+    "howler": "^2.2.4",
+    "msgpack-lite": "^0.1.26",
+    "normalize-wheel": "^1.0.1",
+    "seedrandom": "^3.0.5",
+    "stylus": "^0.64.0",
+    "three": "^0.183.2",
+    "tweakpane": "^4.0.4",
+    "uuid": "^11.1.1",
+    "vite": "^7.3.6",
     "vite-plugin-node-polyfills": "0.24.0",
-    "vite-plugin-wasm": "3.6.0"
+    "vite-plugin-wasm": "^3.6.0"
   },
   "private": true,
   "engines": {
-    "node": "20.x"
+    "node": "24.x"
   },
-  "packageManager": "npm@10.8.2"
+  "packageManager": "npm@11.6.2"
 }

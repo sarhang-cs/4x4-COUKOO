@@ -29,7 +29,7 @@
 
 **4X4 COUKOO** is an interactive browser-based 3D driving world created and maintained by **Sarhang Salah** under **SARHANG IO**. The experience combines vehicle movement, world exploration, physics interactions, day-and-night lighting, ambient effects, touch controls, and game-style interface systems in one stylized environment.
 
-The game is designed for mobile, tablet, and desktop browsers. It uses WebGPU when available and falls back to WebGL when necessary.
+The game is designed for mobile, tablet, and desktop browsers. It uses WebGPU when available and falls back to WebGL when necessary. Node.js 24.x is required for local development and production builds.
 
 ## Screenshots
 
@@ -109,7 +109,7 @@ Use these values when importing the repository:
 
 ```text
 Framework Preset: Vite
-Install Command: npm install
+Install Command: npm ci --no-audit --no-fund
 Build Command: npm run build
 Output Directory: dist
 ```

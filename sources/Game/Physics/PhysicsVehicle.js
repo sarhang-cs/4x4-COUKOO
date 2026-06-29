@@ -11,7 +11,7 @@ export class PhysicsVehicle
 
         this.events = new Events()
 
-        this.steeringAmplitude = 0.5
+        this.steeringAmplitude = 0.72
         this.engineForceAmplitude = 300
         this.boostMultiplier = 2
         this.topSpeed = 5
