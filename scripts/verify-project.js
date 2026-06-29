@@ -86,6 +86,8 @@ for(const file of [ 'static/ui/flags/ku.png', 'static/ui/flags/ku.webp' ])
 const packageJson = JSON.parse(readFileSync(join(projectRoot, 'package.json'), 'utf8'))
 assert(packageJson.name === '4x4-coukoo', 'package.json must use the 4x4-coukoo package name')
 assert(packageJson.license === 'MIT', 'package.json must declare the MIT license')
+assert(packageJson.version === '1.2.0', 'package.json must use version 1.2.0')
+assert(!existsSync(join(projectRoot, 'scripts/compress.js')), 'Unused compression script must be removed')
 
 const oldBrandPattern = new RegExp(
     [
@@ -135,7 +137,20 @@ if(existsSync(areasGlbPath))
 
 const renderingSource = readFileSync(join(sourcesRoot, 'Game/Rendering.js'), 'utf8')
 assert(renderingSource.includes('forceWebGL: !supportsWebGPU'), 'Renderer must select WebGL directly when WebGPU is unavailable')
-assert(renderingSource.includes('this.usePostprocessing = !this.isWebGLFallback'), 'Renderer must use the WebGL compatibility render path')
+assert(renderingSource.includes('this.usePostprocessing = true'), 'Renderer must preserve post-processing in both quality modes')
+assert(renderingSource.includes('profile.depthOfField'), 'Renderer must use the High/Low effects quality profile')
+assert(renderingSource.includes('this.scenePassColor.add(this.bloomPass)'), 'Low quality must retain bloom effects')
+
+const qualitySource = readFileSync(join(sourcesRoot, 'Game/Quality.js'), 'utf8')
+assert(qualitySource.includes("const STORAGE_KEY = '4x4-coukoo-quality'"), 'Quality preference persistence is missing')
+assert(qualitySource.includes('getProfile(level = this.level)'), 'High/Low quality profiles are missing')
+
+const lightingSource = readFileSync(join(sourcesRoot, 'Game/Ligthing.js'), 'utf8')
+assert(lightingSource.includes('applyQualityProfile()'), 'Lighting profile updates are missing')
+assert(!lightingSource.includes("this.game.quality.events.on('change', () =>\n        {\n            this.mapSize"), 'Lighting must not register duplicate quality listeners')
+
+const htmlSource = readFileSync(join(sourcesRoot, 'index.html'), 'utf8')
+assert(!htmlSource.includes('rel="preload"'), 'Unused preload hints must be removed')
 
 const vehicleSource = readFileSync(join(sourcesRoot, 'Game/Physics/PhysicsVehicle.js'), 'utf8')
 assert(vehicleSource.includes('this.steeringAmplitude = 0.88'), 'Vehicle precision steering configuration is missing')

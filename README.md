@@ -38,14 +38,16 @@ The game is designed for mobile, tablet, and desktop browsers. It uses WebGPU wh
 | <img src="./static/readme/4x4-coukoo-cover.png" alt="4X4 COUKOO world screenshot" width="100%" /> | <img src="./static/readme/4x4-coukoo-ui.png" alt="4X4 COUKOO menu and interface screenshot" width="100%" /> |
 
 
-## 2026 Optimization Update
+## 2026 Visual Quality Update
 
-- Mobile WebGL compatibility rendering now bypasses the expensive post-processing pipeline and caps device pixel ratio for steadier frame time.
-- The WebGL fallback selects directly when WebGPU is unavailable, avoiding an unnecessary failed WebGPU initialization attempt.
-- A guarded Three.js WebGL uniform-buffer fix is applied at install time for dynamic node buffers.
-- Vehicle steering is tighter at low speed and progressively stabilized at higher speed.
-- The Kurdistan flag uses a lower-cost animated cloth mesh, a brighter emissive fabric treatment, and a GLB-authored anchor beside the final `G`.
-- Unused WAV masters, redundant preview PNGs, and unreferenced duplicate flag files were removed; production images remain WebP/JPEG where appropriate.
+- **High** restores the complete visual stack: depth-of-field, full bloom, richer glow, higher shadow resolution, motion-driven lighting, water blur, and the original visual density.
+- **Low** keeps the same world effects and bloom, while removing only the expensive depth-of-field pass, using fewer bloom passes, lower shadow resolution, and a smaller render target for smoother mobile play.
+- The graphics choice is stored locally on each device. Desktop starts on High; constrained mobile devices start on Low and can switch to High in Settings at any time.
+- WebGL fallback is selected directly when WebGPU is unavailable, preventing an unnecessary WebGPU initialization attempt.
+- Unused HTML preload hints were removed to prevent browser console noise when those assets are loaded later by the game.
+- The guarded Three.js WebGL uniform-buffer fix remains applied at install time for dynamic node buffers.
+- Vehicle steering remains tighter at low speed and progressively stabilized at higher speed.
+- The Kurdistan flag keeps its optimized cloth mesh, bright emissive fabric treatment, and GLB-authored anchor beside the final `G`.
 
 ## Gameplay Features
 

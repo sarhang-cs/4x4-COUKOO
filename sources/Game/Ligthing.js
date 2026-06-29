@@ -20,12 +20,12 @@ export class Lighting
         this.colorUniform = uniform(color('#ffffff'))
         this.intensityUniform = uniform(1)
         this.count = 1
-        this.mapSize = this.game.quality.level === 0 ? 2048 : 512
+        this.mapSize = 1024
         this.shadowAmplitude = this.game.view.optimalArea.radius
         this.depth = this.game.view.optimalArea.radius * 2
         this.shadowBias = -0.001
         this.shadowNormalBias = 0.1
-        this.shadowRadius = this.game.quality.level === 0 ? 3 : 2
+        this.shadowRadius = 2
 
         if(this.game.debug.active)
         {
@@ -37,7 +37,7 @@ export class Lighting
 
         this.setNodes()
         this.setLight()
-        this.updateShadow()
+        this.applyQualityProfile()
         this.setHelpers()
 
         this.game.ticker.events.on('tick', () =>
@@ -51,6 +51,11 @@ export class Lighting
             this.shadowAmplitude = this.game.view.optimalArea.radius
             this.updateShadow()
         }, 3)
+
+        this.game.quality.events.on('change', () =>
+        {
+            this.applyQualityProfile()
+        })
 
         // Debug
         if(this.game.debug.active)
@@ -150,6 +155,14 @@ export class Lighting
         }
     }
 
+    applyQualityProfile()
+    {
+        const profile = this.game.quality.getProfile()
+        this.mapSize = profile.shadowMapSize
+        this.shadowRadius = profile.shadowRadius
+        this.updateShadow()
+    }
+
     updateShadow()
     {
         this.light.shadow.camera.top = this.shadowAmplitude
@@ -165,11 +178,6 @@ export class Lighting
         this.light.shadow.camera.updateProjectionMatrix()
         this.light.shadow.mapSize.set(this.mapSize, this.mapSize)
 
-        this.game.quality.events.on('change', () =>
-        {
-            this.mapSize = this.game.quality.level === 0 ? 2048 : 512
-            this.light.shadow.mapSize.set(this.mapSize, this.mapSize)
-        })
     }
 
     updateCoordinates()
