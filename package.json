@@ -29,6 +29,7 @@
     "tweakpane": "4.0.4",
     "uuid": "11.1.1",
     "vite": "7.3.6",
+    "vite-plugin-node-polyfills": "0.24.0",
     "vite-plugin-wasm": "3.6.0"
   },
   "private": true,
