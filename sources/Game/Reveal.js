@@ -106,6 +106,9 @@ export class Reveal
                     // Next function
                     const next = () =>
                     {
+                        // Initialise audio inside the user-gesture callback so mobile
+                        // browsers can create/resume AudioContext without warnings.
+                        this.game.audio.init()
                         this.updateStep(1)
                         this.game.inputs.events.off('introStart', inputCallback)
                         this.game.rayCursor.removeIntersect(intersect)

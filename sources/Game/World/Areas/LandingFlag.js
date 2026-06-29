@@ -5,8 +5,8 @@ import { clamp, lerp, remapClamp } from '../../utilities/maths.js'
 const FLAG_SIZE = {
     width: 1.28,
     height: 0.82,
-    segmentsX: 28,
-    segmentsY: 16,
+    segmentsX: 20,
+    segmentsY: 12,
 }
 
 const POLE = {
@@ -81,8 +81,8 @@ export class LandingFlag
     setTexture()
     {
         const canvas = document.createElement('canvas')
-        canvas.width = 1024
-        canvas.height = 640
+        canvas.width = 512
+        canvas.height = 320
         const context = canvas.getContext('2d')
 
         const stripeHeight = canvas.height / 3
@@ -128,7 +128,7 @@ export class LandingFlag
 
         this.texture = new THREE.CanvasTexture(canvas)
         this.texture.colorSpace = THREE.SRGBColorSpace
-        this.texture.anisotropy = 8
+        this.texture.anisotropy = 4
     }
 
     setVisual()
@@ -152,8 +152,10 @@ export class LandingFlag
             metalness: 0,
             clearcoat: 0.08,
             clearcoatRoughness: 0.3,
-            emissive: '#000000',
-            emissiveIntensity: 0,
+            emissive: '#ffd6a6',
+            emissiveMap: this.texture,
+            emissiveIntensity: 0.08,
+            toneMapped: false,
         })
 
         const base = new THREE.Mesh(
@@ -193,7 +195,8 @@ export class LandingFlag
         this.cloth.receiveShadow = true
         this.group.add(this.cloth)
 
-        this.glowLight = new THREE.PointLight('#ffffff', 0, 4.2, 2)
+        this.glowLight = new THREE.PointLight('#ffd6a6', 0.08, 4.8, 2)
+        this.glowLight.castShadow = false
         this.glowLight.position.set(this.clothOffset.x + FLAG_SIZE.width * 0.12, this.clothOffset.y + FLAG_SIZE.height * 0.02, 0.24)
         this.group.add(this.glowLight)
     }
@@ -265,7 +268,9 @@ export class LandingFlag
         this.scratch = {
             glowColor: new THREE.Color(),
             materialColor: new THREE.Color(),
+            warmGlowColor: new THREE.Color('#ffe6bc'),
         }
+        this.clothFrame = 0
     }
 
     update()
@@ -307,8 +312,13 @@ export class LandingFlag
         }
 
         positionAttribute.needsUpdate = true
-        this.clothGeometry.computeVertexNormals()
-        this.clothGeometry.attributes.normal.needsUpdate = true
+
+        this.clothFrame++
+        if(this.clothFrame % 2 === 0)
+        {
+            this.clothGeometry.computeVertexNormals()
+            this.clothGeometry.attributes.normal.needsUpdate = true
+        }
     }
 
     updateLighting()
@@ -326,16 +336,17 @@ export class LandingFlag
         this.scratch.glowColor.copy(this.game.dayCycles.properties.lightColor.value)
         this.scratch.glowColor.lerp(this.game.dayCycles.properties.revealColor.value, 0.45 + stormFactor * 0.15)
 
-        const emissiveIntensity = Math.max(0, transitionFactor * 0.22 + nightFactor * 0.85 + rainFactor * 0.08 + stormFactor * 0.28 + flicker)
-        const lightIntensity = Math.max(0, transitionFactor * 0.35 + nightFactor * 1.4 + stormFactor * 0.8 + flicker * 1.4)
+        const emissiveIntensity = 0.08 + transitionFactor * 0.62 + nightFactor * 1.18 + rainFactor * 0.14 + stormFactor * 0.42 + flicker
+        const lightIntensity = 0.04 + transitionFactor * 0.68 + nightFactor * 1.7 + stormFactor * 0.95 + flicker * 1.6
 
+        this.scratch.glowColor.lerp(this.scratch.warmGlowColor, 0.3)
         this.clothMaterial.emissive.copy(this.scratch.glowColor)
         this.clothMaterial.emissiveIntensity = emissiveIntensity
 
         this.glowLight.color.copy(this.scratch.glowColor)
         this.glowLight.intensity = lightIntensity
-        this.glowLight.distance = lerp(2.4, 4.8, clamp(lightIntensity / 2.4, 0, 1))
-        this.glowLight.decay = 1.8
+        this.glowLight.distance = lerp(2.8, 5.2, clamp(lightIntensity / 2.8, 0, 1))
+        this.glowLight.decay = 1.75
     }
 
     updateMaterial()

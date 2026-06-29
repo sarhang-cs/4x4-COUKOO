@@ -29,13 +29,23 @@
 
 **4X4 COUKOO** is an interactive browser-based 3D driving world created and maintained by **Sarhang Salah** under **SARHANG IO**. The experience combines vehicle movement, world exploration, physics interactions, day-and-night lighting, ambient effects, touch controls, and game-style interface systems in one stylized environment.
 
-The game is designed for mobile, tablet, and desktop browsers. It uses WebGPU when available and falls back to WebGL when necessary.
+The game is designed for mobile, tablet, and desktop browsers. It uses WebGPU when available and selects a lightweight WebGL compatibility path when WebGPU is unavailable.
 
 ## Screenshots
 
 | Gameplay world | In-game interface |
 | --- | --- |
 | <img src="./static/readme/4x4-coukoo-cover.png" alt="4X4 COUKOO world screenshot" width="100%" /> | <img src="./static/readme/4x4-coukoo-ui.png" alt="4X4 COUKOO menu and interface screenshot" width="100%" /> |
+
+
+## 2026 Optimization Update
+
+- Mobile WebGL compatibility rendering now bypasses the expensive post-processing pipeline and caps device pixel ratio for steadier frame time.
+- The WebGL fallback selects directly when WebGPU is unavailable, avoiding an unnecessary failed WebGPU initialization attempt.
+- A guarded Three.js WebGL uniform-buffer fix is applied at install time for dynamic node buffers.
+- Vehicle steering is tighter at low speed and progressively stabilized at higher speed.
+- The Kurdistan flag uses a lower-cost animated cloth mesh, a brighter emissive fabric treatment, and a GLB-authored anchor beside the final `G`.
+- Unused WAV masters, redundant preview PNGs, and unreferenced duplicate flag files were removed; production images remain WebP/JPEG where appropriate.
 
 ## Gameplay Features
 
@@ -109,9 +119,10 @@ Use these values when importing the repository:
 
 ```text
 Framework Preset: Vite
-Install Command: npm ci
+Install Command: npm install --no-audit --no-fund
 Build Command: npm run build
 Output Directory: dist
+Node.js Version: 24.x
 ```
 
 ## Project Structure
@@ -137,6 +148,7 @@ Output Directory: dist
 
 - The first visit can take longer because the game loads 3D models, textures, audio, and shaders.
 - A modern browser with hardware acceleration enabled is recommended.
+- Mobile WebGL fallback uses a direct rendering path and a reduced pixel ratio to keep frame time stable.
 - Use the in-game quality settings on lower-end devices.
 - Close unused browser tabs to keep more memory available on mobile devices.
 

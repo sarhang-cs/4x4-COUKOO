@@ -11,7 +11,8 @@ export class PhysicsVehicle
 
         this.events = new Events()
 
-        this.steeringAmplitude = 0.72
+        this.steeringAmplitude = 0.88
+        this.steeringHighSpeedReduction = 0.74
         this.engineForceAmplitude = 300
         this.boostMultiplier = 2
         this.topSpeed = 5
@@ -48,6 +49,7 @@ export class PhysicsVehicle
             })
 
             this.debugPanel.addBinding(this, 'steeringAmplitude', { min: 0, max: Math.PI * 0.5, step: 0.01 })
+            this.debugPanel.addBinding(this, 'steeringHighSpeedReduction', { min: 0.4, max: 1, step: 0.01 })
             this.debugPanel.addBinding(this, 'engineForceAmplitude', { min: 1, max: 20, step: 1 })
             this.debugPanel.addBinding(this, 'boostMultiplier', { min: 1, max: 5, step: 0.01 })
             this.debugPanel.addBinding(this, 'topSpeed', { min: 0, max: 20, step: 0.1 })
@@ -481,8 +483,9 @@ export class PhysicsVehicle
 
         brake *= this.brakeAmplitude * this.game.ticker.deltaScaled
 
-        // Steer
-        const steer = this.game.player.steering * this.steeringAmplitude
+        // Steer: tighter at manoeuvring speed, while high-speed reduction keeps the original weight and stability.
+        const steeringSpeedFactor = lerp(1, this.steeringHighSpeedReduction, remapClamp(Math.abs(this.speed), 5, 24, 0, 1))
+        const steer = this.game.player.steering * this.steeringAmplitude * steeringSpeedFactor
 
         // Update wheels
         this.controller.setWheelSteering(0, steer)

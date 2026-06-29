@@ -25,7 +25,13 @@ export class Audio
 
     init()
     {
+        if(this.initiated)
+            return
+
         this.initiated = true
+
+        if(Howler.ctx?.state === 'suspended')
+            Howler.ctx.resume().catch(() => {})
 
         this.setPlaylist()
         this.setAmbiants()

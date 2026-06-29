@@ -5,9 +5,9 @@ export class Viewport
     constructor(domElement)
     {
         this.domElement = domElement
-
         this.events = new Events()
-        
+        this.isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
+
         this.measure()
         this.setResize()
     }
@@ -21,7 +21,7 @@ export class Viewport
         this.ratio = this.width / this.height
 
         this.pixelRatioPure = window.devicePixelRatio
-        this.pixelRatioMax = 2
+        this.pixelRatioMax = this.isMobile ? 1.25 : 2
         this.pixelRatio = Math.min(this.pixelRatioPure, this.pixelRatioMax)
     }
 
@@ -35,9 +35,7 @@ export class Viewport
             this.events.trigger('change')
 
             if(throttleTimeout)
-            {
                 clearTimeout(throttleTimeout)
-            }
 
             throttleTimeout = setTimeout(() =>
             {

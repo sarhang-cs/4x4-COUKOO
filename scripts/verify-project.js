@@ -133,6 +133,20 @@ if(existsSync(areasGlbPath))
 }
 
 
+const renderingSource = readFileSync(join(sourcesRoot, 'Game/Rendering.js'), 'utf8')
+assert(renderingSource.includes('forceWebGL: !supportsWebGPU'), 'Renderer must select WebGL directly when WebGPU is unavailable')
+assert(renderingSource.includes('this.usePostprocessing = !this.isWebGLFallback'), 'Renderer must use the WebGL compatibility render path')
+
+const vehicleSource = readFileSync(join(sourcesRoot, 'Game/Physics/PhysicsVehicle.js'), 'utf8')
+assert(vehicleSource.includes('this.steeringAmplitude = 0.88'), 'Vehicle precision steering configuration is missing')
+
+const flagSource = readFileSync(join(sourcesRoot, 'Game/World/Areas/LandingFlag.js'), 'utf8')
+assert(flagSource.includes('emissiveMap: this.texture'), 'Flag cloth emissive texture is missing')
+assert(flagSource.includes('segmentsX: 20'), 'Flag performance geometry configuration is missing')
+
+const wavFiles = walk(staticRoot).filter((file) => file.endsWith('.wav'))
+assert(wavFiles.length === 0, `Unused WAV assets remain: ${wavFiles.length}`)
+
 if(failures.length)
 {
     console.error('\nProject verification failed:\n')
