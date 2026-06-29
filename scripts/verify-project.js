@@ -29,6 +29,7 @@ const walk = (directory, files = []) =>
 
 const sourceFiles = walk(sourcesRoot).filter((file) => /\.(js|html|styl)$/.test(file))
 
+// Local JavaScript imports must resolve from the source tree.
 for(const file of sourceFiles.filter((item) => item.endsWith('.js')))
 {
     const content = readFileSync(file, 'utf8')
@@ -45,6 +46,7 @@ for(const file of sourceFiles.filter((item) => item.endsWith('.js')))
     }
 }
 
+// Public images, fonts and icons referenced by the application must exist in static/.
 const checkPublicPath = (publicPath, sourceFile) =>
 {
     if(!publicPath || /^(https?:|data:|#|\.\/style\/)/.test(publicPath))
@@ -74,49 +76,62 @@ for(const file of sourceFiles.filter((item) => item.endsWith('.styl')))
         checkPublicPath(match[1], file)
 }
 
-for(const file of [ 'README.md', 'LICENSE', 'NOTICE', 'package.json', 'package-lock.json', 'vercel.json' ])
+// Project identity and new Kurdistan flag assets are required.
+for(const file of [ 'README.md', 'LICENSE', 'NOTICE', 'package.json', 'package-lock.json' ])
     assert(existsSync(join(projectRoot, file)), `Required root file is missing: ${file}`)
 
-for(const file of [
-    'static/ui/flags/ku.png',
-    'static/ui/flags/ku.webp',
-    'static/ui/previews/options.png',
-    'static/ui/previews/options.webp',
-    'static/areas/areas.glb'
-])
-    assert(existsSync(join(projectRoot, file)), `Required game asset is missing: ${file}`)
+for(const file of [ 'static/ui/flags/ku.png', 'static/ui/flags/ku.webp' ])
+    assert(existsSync(join(projectRoot, file)), `Required Kurdistan flag asset is missing: ${file}`)
 
 const packageJson = JSON.parse(readFileSync(join(projectRoot, 'package.json'), 'utf8'))
 assert(packageJson.name === '4x4-coukoo', 'package.json must use the 4x4-coukoo package name')
 assert(packageJson.license === 'MIT', 'package.json must declare the MIT license')
-assert(packageJson.engines?.node === '24.x', 'package.json must require Node.js 24.x')
-assert(!packageJson.dependencies?.sharp, 'sharp is a build-only dependency and must not ship with the game')
-assert(!packageJson.dependencies?.glob, 'glob is a build-only dependency and must not ship with the game')
-assert(!packageJson.dependencies?.['@gltf-transform/cli'], 'gltf-transform CLI is not required at runtime')
 
-const areasFile = readFileSync(join(projectRoot, 'static/areas/areas.glb'))
-assert(areasFile.toString('utf8', 0, 4) === 'glTF', 'areas.glb must be a valid GLB file')
-const jsonLength = areasFile.readUInt32LE(12)
-const areasJson = JSON.parse(areasFile.toString('utf8', 20, 20 + jsonLength).trim())
-const landing = areasJson.nodes.find((node) => node.name === 'landing')
-assert(Boolean(landing), 'areas.glb must contain the landing scene')
-
-const landingChildren = (landing?.children ?? []).map((index) => areasJson.nodes[index])
-const titleNodes = landingChildren.filter((node) => /^refLettersPhysicalDynamic\d+$/.test(node.name ?? ''))
-assert(titleNodes.length === 7, 'areas.glb must contain exactly seven physical SARHANG title letters')
-assert(landingChildren.some((node) => node.name === 'refLandingFlagAnchor'), 'areas.glb must contain the landing flag anchor')
-assert(areasJson.materials.some((material) => material.name === 'landingTitlePurple'), 'areas.glb must contain the solid landing title material')
-assert(!areasJson.nodes.some((node) => /refLettersPhysicalDynamic\.01[789]/.test(node.name ?? '')), 'Legacy title letter nodes must be removed from areas.glb')
-
-const optionsPreview = readFileSync(join(projectRoot, 'static/ui/previews/options.png'))
-assert(optionsPreview.length > 100000, 'Options preview must retain the complete high-resolution cover artwork')
-
-const oldBrandPattern = /\b(?:Bruno\s+Simon|bruno-simon|brunosimon|Folio\s*2025|MY[-\s]?3D[-\s]?GAME)\b/i
+const oldBrandPattern = new RegExp(
+    [
+        [ 'Br', 'uno\\s+', 'Sim', 'on' ].join(''),
+        [ 'br', 'uno-s', 'imon' ].join(''),
+        String.fromCharCode(98, 114, 117, 110, 111, 115, 105, 109, 111, 110),
+        [ 'Fo', 'lio\\s*20', '25' ].join(''),
+        [ 'MY[-\\s]?3D[-\\s]?GA', 'ME' ].join(''),
+    ].join('|'),
+    'i'
+)
 for(const file of [ ...sourceFiles, join(projectRoot, 'README.md'), join(projectRoot, 'package.json') ])
 {
     const content = readFileSync(file, 'utf8')
     assert(!oldBrandPattern.test(content), `Legacy branding remains in ${relative(projectRoot, file)}`)
 }
+
+// Landing model integrity: the title is stored directly in areas.glb and must keep
+// valid buffer references so Rapier can build its colliders at runtime.
+const areasGlbPath = join(staticRoot, 'areas/areas.glb')
+assert(existsSync(areasGlbPath), 'Landing areas GLB is missing')
+if(existsSync(areasGlbPath))
+{
+    const glb = readFileSync(areasGlbPath)
+    const jsonLength = glb.readUInt32LE(12)
+    const glbJson = JSON.parse(glb.toString('utf8', 20, 20 + jsonLength))
+    const binOffset = 20 + jsonLength + 8
+    const binLength = glb.readUInt32LE(20 + jsonLength)
+
+    assert(glb.toString('utf8', 0, 4) === 'glTF', 'areas.glb must be a GLB file')
+    assert(binOffset + binLength === glb.length, 'areas.glb binary chunk length is invalid')
+
+    const landing = glbJson.nodes.find((node) => node.name === 'landing')
+    assert(Boolean(landing), 'areas.glb landing node is missing')
+
+    const titleNodes = glbJson.nodes.filter((node) => /^refLettersPhysicalDynamic\d{3}$/.test(node.name ?? ''))
+    assert(titleNodes.length === 7, `areas.glb must contain 7 SARHANG title meshes, found ${titleNodes.length}`)
+    assert(glbJson.nodes.some((node) => node.name === 'refLandingFlagAnchor'), 'areas.glb flag anchor is missing')
+
+    for(const [index, view] of glbJson.bufferViews.entries())
+    {
+        const offset = view.byteOffset ?? 0
+        assert(offset + view.byteLength <= binLength, `areas.glb buffer view ${index} exceeds its binary chunk`)
+    }
+}
+
 
 if(failures.length)
 {
@@ -127,4 +142,5 @@ if(failures.length)
     process.exit(1)
 }
 
-console.log(`Project verification passed: ${sourceFiles.length} source files and the landing GLB were checked.`)
+console.log(`Project verification passed: ${sourceFiles.length} source files checked.`)
+

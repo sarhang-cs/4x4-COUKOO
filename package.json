@@ -11,7 +11,7 @@
   },
   "author": "Sarhang Salah <sarhang.pasha123@gmail.com> (SARHANG IO)",
   "license": "MIT",
-  "description": "4X4 COUKOO — interactive 3D driving world by Sarhang Salah / SARHANG IO.",
+  "description": "4X4 COUKOO \u2014 interactive 3D driving world by Sarhang Salah / SARHANG IO.",
   "dependencies": {
     "@dimforge/rapier3d": "^0.17.3",
     "@tweakpane/plugin-camerakit": "^0.3.0",
@@ -29,7 +29,6 @@
     "tweakpane": "^4.0.4",
     "uuid": "^11.1.1",
     "vite": "^7.3.6",
-    "vite-plugin-node-polyfills": "0.24.0",
     "vite-plugin-wasm": "^3.6.0"
   },
   "private": true,

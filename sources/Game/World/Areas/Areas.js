@@ -43,7 +43,9 @@ export class Areas
             for(const [ name, AreaClass ] of list)
             {
                 if(child.name.startsWith(name))
+                {
                     this[name] = new AreaClass(child)
+                }
             }
         }
 

@@ -1,8 +1,6 @@
 import * as THREE from 'three/webgpu'
 import { Game } from '../../Game.js'
 import { clamp, lerp, remapClamp } from '../../utilities/maths.js'
-import { Menu } from '../../Menu.js'
-import { Modals } from '../../Modals.js'
 
 const FLAG_SIZE = {
     width: 1.28,
@@ -36,18 +34,29 @@ export class LandingFlag
     constructor(options = {})
     {
         this.game = Game.getInstance()
-        this.area = options.area
-        this.anchor = options.anchor
+        this.references = options.references
         this.hideables = options.hideables
 
-        if(!this.anchor)
-            throw new Error('Landing flag anchor is missing from areas.glb')
-
+        this.setAnchor()
         this.setAudio()
         this.setTexture()
         this.setVisual()
         this.setPhysics()
+        this.setVisibilityEvents()
         this.setUpdates()
+    }
+
+    setAnchor()
+    {
+        const anchor = this.references.items.get('landingFlagAnchor')?.[0]
+
+        if(!anchor)
+            throw new Error('Landing flag anchor is missing from areas.glb')
+
+        this.anchor = {
+            position: anchor.position.clone(),
+            rotation: anchor.quaternion.clone()
+        }
     }
 
     setAudio()
@@ -109,6 +118,11 @@ export class LandingFlag
         context.fillStyle = '#f4c537'
         context.beginPath()
         context.arc(0, 0, sunRadius, 0, Math.PI * 2)
+        context.fill()
+
+        context.fillStyle = '#f7d55b'
+        context.beginPath()
+        context.arc(0, 0, sunRadius * 0.65, 0, Math.PI * 2)
         context.fill()
         context.restore()
 
@@ -197,7 +211,7 @@ export class LandingFlag
             {
                 type: 'fixed',
                 position: this.anchor.position,
-                rotation: this.anchor.quaternion,
+                rotation: this.anchor.rotation,
                 friction: 0.9,
                 colliders: [
                     {
@@ -207,9 +221,15 @@ export class LandingFlag
                         category: 'object'
                     },
                     {
-                        shape: 'cylinder',
-                        parameters: [ POLE.height * 0.5, POLE.radius * 1.1 ],
+                        shape: 'cuboid',
+                        parameters: [ POLE.radius * 1.25, POLE.height * 0.5, POLE.radius * 1.25 ],
                         position: new THREE.Vector3(0, POLE.height * 0.5, 0),
+                        category: 'object'
+                    },
+                    {
+                        shape: 'cuboid',
+                        parameters: [ FLAG_SIZE.width * 0.46, FLAG_SIZE.height * 0.42, 0.08 ],
+                        position: new THREE.Vector3(this.clothOffset.x, this.clothOffset.y, 0),
                         category: 'object'
                     }
                 ],
@@ -227,6 +247,19 @@ export class LandingFlag
         this.hideables.push(this.object.visual.object3D)
     }
 
+    setVisibilityEvents()
+    {
+        const setVisible = (visible) =>
+        {
+            this.object.visual.object3D.visible = visible
+        }
+
+        this.game.menu.events.on('open', () => setVisible(false))
+        this.game.menu.events.on('close', () => setVisible(true))
+        this.game.modals.events.on('open', () => setVisible(false))
+        this.game.modals.events.on('close', () => setVisible(true))
+    }
+
     setUpdates()
     {
         this.scratch = {
@@ -237,23 +270,9 @@ export class LandingFlag
 
     update()
     {
-        this.updateVisibility()
-
-        if(!this.group.visible)
-            return
-
         this.updateCloth()
         this.updateLighting()
         this.updateMaterial()
-    }
-
-    updateVisibility()
-    {
-        const menuClosed = this.game.menu.state === Menu.CLOSED
-        const modalsClosed = this.game.modals.state === Modals.CLOSED
-        const frustumVisible = !this.area.frustum || this.area.frustum.isIn
-
-        this.group.visible = this.area.isIn && frustumVisible && menuClosed && modalsClosed
     }
 
     updateCloth()

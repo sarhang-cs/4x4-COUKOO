@@ -166,6 +166,11 @@
             height 100%
             object-fit cover
 
+        .options-preview
+            .background
+                object-fit contain
+                background #1d1721
+
         .preview
             position absolute
             top 0
@@ -401,8 +406,3 @@
 
                         .is-mode-gamepad.is-gamepad-xbox &
                             display block
-
-// The options artwork is intentionally shown in full. It must never be cropped.
-.menu .options-preview .background
-    object-fit contain
-    background #1d1721
