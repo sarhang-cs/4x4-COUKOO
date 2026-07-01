@@ -94,6 +94,8 @@ export class Options
             })
         })
         this.game.quality.events.on('change', update)
+        this.game.quality.events.on('settingsChange', update)
+        this.game.quality.events.on('deviceChange', update)
         update()
     }
 
@@ -343,11 +345,27 @@ export class Options
 
         const text = element.querySelector('span')
         const tooltip = element.querySelector('.tooltip')
+        element.classList.remove('is-disabled')
+        element.setAttribute('aria-label', 'Run display capability calibration')
+
         const update = () =>
         {
-            text.textContent = this.game.quality.getDeviceSummary()
-            tooltip.textContent = this.game.quality.getDeviceDetails()
+            const refresh = this.game.quality.device.refresh
+            text.textContent = refresh?.state === 'measuring'
+                ? 'Calibrating display…'
+                : this.game.quality.getDeviceSummary()
+            tooltip.textContent = `${this.game.quality.getDeviceDetails()} Tap to run a fresh clean display check; no old cadence result is reused.`
         }
+
+        element.addEventListener('click', () =>
+        {
+            this.game.quality.startFrameRateProbe({ delay: 80, force: true })
+            this.game.notifications?.show(
+                '<div class="top"><div class="title">Display check</div></div><div class="bottom"><div class="description">Calibrating the browser cadence without 3D render load…</div></div>',
+                'quality-assets',
+                2
+            )
+        })
 
         this.game.quality.events.on('deviceChange', update)
         update()

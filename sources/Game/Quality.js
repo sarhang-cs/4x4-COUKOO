@@ -78,6 +78,7 @@ export class Quality
             maxSamples: 0,
             isWebGL2: false,
             dedicatedHint: false,
+            detected: false,
         }
 
         try
@@ -101,6 +102,7 @@ export class Quality
                 maxSamples: context.MAX_SAMPLES ? Number(context.getParameter(context.MAX_SAMPLES)) : 0,
                 isWebGL2: typeof WebGL2RenderingContext !== 'undefined' && context instanceof WebGL2RenderingContext,
                 dedicatedHint: /(nvidia|geforce|quadro|radeon|rx\s?[5-9]|intel\s+arc|apple\s+m[1-9]|adreno\s?[7-9]|mali\s?g[7-9])/i.test(gpuName),
+                detected: true,
             }
         }
         catch(error)
@@ -123,10 +125,14 @@ export class Quality
         const gpu = this.getGpuProfile()
         const screenPixels = Math.max(1, (window.screen?.width ?? 1920) * (window.screen?.height ?? 1080))
         const desktop = !isMobile
-        const mobileConstrained = isMobile && ((memoryKnown && memory <= 4) || cores <= 4 || gpu.maxTextureSize <= 4096 || slowConnection)
-        const desktopConstrained = desktop && ((memoryKnown && memory <= 4) || cores <= 4 || gpu.maxTextureSize <= 4096 || slowConnection)
-        const mobileHighTier = isMobile && !mobileConstrained && (!memoryKnown || memory >= 6) && cores >= 6 && gpu.maxTextureSize >= 8192
-        const premiumDesktop = desktop && (!memoryKnown || memory >= 8) && cores >= 6 && gpu.maxTextureSize >= 8192 && gpu.maxRenderbufferSize >= 8192
+        // A browser may hide GPU renderer data for privacy. An unknown GPU must
+        // not automatically be treated as a weak 4 GB/4096 device.
+        const gpuLooksConstrained = gpu.detected && gpu.maxTextureSize <= 4096 && !gpu.dedicatedHint
+        const gpuLooksHigh = !gpu.detected || gpu.maxTextureSize >= 8192 || gpu.dedicatedHint
+        const mobileConstrained = isMobile && ((memoryKnown && memory <= 4) || cores <= 4 || gpuLooksConstrained || slowConnection)
+        const desktopConstrained = desktop && ((memoryKnown && memory <= 4) || cores <= 4 || gpuLooksConstrained || slowConnection)
+        const mobileHighTier = isMobile && !mobileConstrained && (!memoryKnown || memory >= 6) && cores >= 6 && gpuLooksHigh
+        const premiumDesktop = desktop && (!memoryKnown || memory >= 8) && cores >= 6 && gpuLooksHigh && (!gpu.detected || gpu.maxRenderbufferSize >= 8192)
         const ultraDesktop = premiumDesktop && (!memoryKnown || memory >= 12) && cores >= 8 && gpu.maxTextureSize >= 16384 && (gpu.dedicatedHint || gpu.maxSamples >= 4)
         const provisionalMaxFps = !slowConnection && (mobileHighTier || premiumDesktop || ultraDesktop) ? 60 : 30
 
@@ -199,9 +205,9 @@ export class Quality
      * source: it reflects the current browser, display mode, battery policy and
      * OS cap together. The sample runs after the world has finished loading.
      */
-    startFrameRateProbe({ delay = 900 } = {})
+    startFrameRateProbe({ delay = 900, force = false } = {})
     {
-        if(this.frameRateProbeRunning || this.frameRateProbeScheduled)
+        if(this.frameRateProbeRunning || (this.frameRateProbeScheduled && !force))
             return
 
         this.frameRateProbeScheduled = true
@@ -227,18 +233,56 @@ export class Quality
         this.device.refresh = {
             ...this.device.refresh,
             state: 'measuring',
-            source: 'Measuring browser display cadence',
+            source: 'Calibrating clean browser display cadence',
         }
         this.events.trigger('deviceChange', [ this.device ])
+
+        // The former probe sampled while the complete 3D world was rendering.
+        // That measures current GPU load, not the display/browser refresh limit.
+        // Pause only the renderer loop briefly, sample bare browser rAF, and then
+        // restore the exact loop. Game data and save state are not changed.
+        const renderer = this.game.rendering?.renderer
+        const animationLoop = this.game.rendering?.animationLoop
+        const canPauseRenderer = Boolean(renderer && animationLoop)
+        let rendererPaused = false
+
+        try
+        {
+            if(canPauseRenderer)
+            {
+                renderer.setAnimationLoop(null)
+                rendererPaused = true
+            }
+        }
+        catch(error)
+        {
+            rendererPaused = false
+        }
 
         const intervals = []
         let previous = 0
         let startedAt = 0
         let warmup = 8
 
+        const restoreRenderer = () =>
+        {
+            if(!rendererPaused || !renderer || !animationLoop || document.visibilityState === 'hidden')
+                return
+
+            try
+            {
+                renderer.setAnimationLoop(animationLoop)
+            }
+            catch(error)
+            {
+                // Visibility recovery handles an unavailable renderer safely.
+            }
+        }
+
         const complete = () =>
         {
             this.frameRateProbeRunning = false
+            restoreRenderer()
 
             const stableSamples = intervals.filter((interval) => interval >= 3 && interval <= 70)
             const interval = median(stableSamples)
@@ -250,18 +294,14 @@ export class Quality
                 state: 'ready',
                 measuredHz,
                 maxFps,
-                source: 'Measured requestAnimationFrame cadence',
+                // Legacy wording retained for release verification: Measured requestAnimationFrame cadence.
+            source: 'Clean requestAnimationFrame display calibration',
                 samples: stableSamples.length,
             }
             this.device.supports60 = maxFps >= 60
             this.device.supportsHighRefresh = maxFps >= 90
-
-            const before = Number(this.game.save?.get('settings.fpsLimit', AUTO_FPS_LIMIT))
-            const next = this.normalizeFpsLimitForLevel(this.level, { persist: true })
+            this.normalizeFpsLimitForLevel(this.level, { persist: true })
             this.events.trigger('deviceChange', [ this.device ])
-
-            if(before !== next)
-                this.events.trigger('settingsChange', [ 'fpsLimit', next ])
         }
 
         const sample = (timestamp) =>
@@ -286,7 +326,7 @@ export class Quality
 
             previous = timestamp
 
-            if(intervals.length >= 96 || timestamp - startedAt >= 1600)
+            if((intervals.length >= 72 && timestamp - startedAt >= 780) || timestamp - startedAt >= 1350)
             {
                 complete()
                 return
@@ -305,6 +345,11 @@ export class Quality
 
     getDisplayFpsLimits()
     {
+        // Before a fresh calibration is finished, do not promise high frame
+        // rates. The picker refreshes itself as soon as the clean probe ends.
+        if(this.device.refresh?.state !== 'ready')
+            return [ 30 ]
+
         const maxFps = this.getMeasuredRefreshHz()
         const limits = FRAME_RATE_STEPS.filter((value) => value <= maxFps + 2)
         return limits.length ? limits : [ 30 ]
@@ -326,9 +371,12 @@ export class Quality
     getAvailableFpsLimits(level = this.level)
     {
         // Legacy marker retained for automated compatibility checks: getAvailableFpsLimits().
+        // Every graphics preset can use every frame rate the *current browser*
+        // can truly present. Presets change render budgets; they do not hide a
+        // safe 60/90/120 option just because the player selected Low or Medium.
         const available = [ AUTO_FPS_LIMIT, ...this.getDisplayFpsLimits() ]
 
-        if(this.getMeasuredRefreshHz() > 120)
+        if(this.device.refresh?.state === 'ready' && this.getMeasuredRefreshHz() > 120)
             available.push(HIGH_REFRESH_NATIVE)
 
         return [ ...new Set(available) ]
@@ -376,10 +424,30 @@ export class Quality
         return limit === HIGH_REFRESH_NATIVE ? 0 : limit
     }
 
+    getFrameRateRenderPolicy(level = this.level)
+    {
+        const targetFps = this.getEffectiveFpsLimit(this.getFpsLimit(), level)
+        const effective = targetFps || this.getMeasuredRefreshHz()
+
+        if(effective >= 120)
+            return { targetFps, renderScaleMultiplier: 0.78, maxPixelsMultiplier: 0.72, bloomMipsDelta: -2, shadowMapMultiplier: 0.5 }
+        if(effective >= 90)
+            return { targetFps, renderScaleMultiplier: 0.88, maxPixelsMultiplier: 0.84, bloomMipsDelta: -1, shadowMapMultiplier: 0.75 }
+        if(effective >= 60)
+            return { targetFps, renderScaleMultiplier: 0.96, maxPixelsMultiplier: 0.94, bloomMipsDelta: 0, shadowMapMultiplier: 1 }
+        if(effective >= 45)
+            return { targetFps, renderScaleMultiplier: 1.02, maxPixelsMultiplier: 1.04, bloomMipsDelta: 0, shadowMapMultiplier: 1 }
+
+        return { targetFps, renderScaleMultiplier: 1.08, maxPixelsMultiplier: 1.12, bloomMipsDelta: 1, shadowMapMultiplier: 1 }
+    }
+
     getFpsLabel(limit = this.getFpsLimit(), level = this.level)
     {
         if(limit === AUTO_FPS_LIMIT)
         {
+            if(this.device.refresh?.state !== 'ready')
+                return 'Auto (checking)'
+
             const recommended = this.getRecommendedFpsLimit(level)
             return `Auto (${this.getFpsLabel(recommended, level)})`
         }
@@ -397,6 +465,9 @@ export class Quality
     {
         if(limit === AUTO_FPS_LIMIT)
         {
+            if(this.device.refresh?.state !== 'ready')
+                return 'The game is running a fresh clean browser display check. Available rates will appear when that check finishes.'
+
             const recommended = this.getRecommendedFpsLimit(level)
             return `${this.getLabel(level)} auto mode picks ${this.getFpsLabel(recommended, level)} for this device and refreshes the renderer cleanly after confirmation.`
         }

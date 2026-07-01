@@ -43,7 +43,8 @@ export class Fog
         // Apply day cycles values
         const amplitude = this.game.view.optimalArea.farDistance - this.game.view.optimalArea.nearDistance
         const profile = this.game.quality.getProfile()
-        const visibilityMultiplier = Number(profile.visibilityMultiplier ?? 1)
+        const framePolicy = this.game.quality.getFrameRateRenderPolicy(profile.level)
+        const visibilityMultiplier = Number(profile.visibilityMultiplier ?? 1) * (framePolicy.targetFps >= 120 ? 0.96 : framePolicy.targetFps >= 90 ? 0.98 : 1)
         const baseNear = this.game.view.optimalArea.nearDistance + this.game.dayCycles.properties.fogNearRatio.value * amplitude
         const baseFar = this.game.view.optimalArea.nearDistance + this.game.dayCycles.properties.fogFarRatio.value * amplitude
         this.colorA.value.copy(this.game.dayCycles.properties.fogColorA.value)

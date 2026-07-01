@@ -162,8 +162,9 @@ export class Lighting
     applyQualityProfile()
     {
         const profile = this.game.quality.getProfile()
-        this.mapSize = profile.shadowMapSize
-        this.shadowRadius = profile.shadowRadius
+        const framePolicy = this.game.quality.getFrameRateRenderPolicy(profile.level)
+        this.mapSize = Math.max(256, Math.round(profile.shadowMapSize * framePolicy.shadowMapMultiplier))
+        this.shadowRadius = profile.shadowRadius * Math.sqrt(framePolicy.shadowMapMultiplier)
         this.light.castShadow = this.game.quality.getShadowsEnabled()
         this.updateShadow()
     }

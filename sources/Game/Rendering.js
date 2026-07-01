@@ -96,6 +96,7 @@ export class Rendering
         this.isWebGLFallback = this.renderer.backend.isWebGLBackend
         this.applyQualityProfile()
         this.game.quality.events.on('settingsChange', () => this.applyQualityProfile())
+        this.game.quality.events.on('deviceChange', () => this.applyQualityProfile())
         return this.renderer
     }
 
@@ -128,10 +129,12 @@ export class Rendering
     applyQualityProfile()
     {
         const profile = this.game.quality.getProfile()
+        const framePolicy = this.game.quality.getFrameRateRenderPolicy(profile.level)
         const lowLevel = this.game.quality.constructor.LEVELS.LOW
         this.pixelRatioLimit = profile.pixelRatioLimit
         this.pixelRatioFloor = profile.pixelRatioFloor
-        this.renderScale = profile.renderScaleInitial
+        this.maxRenderPixels = profile.maxRenderPixels * framePolicy.maxPixelsMultiplier
+        this.renderScale = profile.renderScaleInitial * framePolicy.renderScaleMultiplier
         this.performance.lastAdjustmentElapsed = this.game.ticker?.elapsed ?? 0
         this.performance.slowWindows = 0
         this.performance.fastWindows = 0
@@ -147,7 +150,7 @@ export class Rendering
                 : THREE.NoToneMapping
             this.renderer.toneMappingExposure = profile.toneMappingExposure
             this.renderer.shadowMap.enabled = this.game.quality.getShadowsEnabled()
-            this.frameLimit = this.game.quality.getEffectiveFpsLimit()
+            this.frameLimit = framePolicy.targetFps
             this.lastRenderElapsed = -Infinity
             this.lastRenderTimestamp = -Infinity
             this.frameAccumulator = 0
@@ -157,7 +160,7 @@ export class Rendering
         if(!this.bloomPass || !this.postProcessing)
             return
 
-        this.bloomPass._nMips = profile.bloomMips
+        this.bloomPass._nMips = Math.max(1, profile.bloomMips + framePolicy.bloomMipsDelta)
         this.bloomPass.threshold.value = profile.bloomThreshold
         this.bloomPass.strength.value = profile.bloomStrength
         this.bloomPass.smoothWidth.value = profile.bloomSmoothWidth
@@ -180,7 +183,8 @@ export class Rendering
         const profile = this.game.quality.getProfile()
         const nativePixelRatio = this.game.viewport.pixelRatioPure ?? this.game.viewport.pixelRatio
         const viewportPixels = Math.max(1, this.game.viewport.width * this.game.viewport.height)
-        const budgetPixelRatio = Math.sqrt(profile.maxRenderPixels / viewportPixels)
+        const maxRenderPixels = this.maxRenderPixels ?? profile.maxRenderPixels
+        const budgetPixelRatio = Math.sqrt(maxRenderPixels / viewportPixels)
         const maximum = Math.max(0.5, Math.min(profile.pixelRatioLimit, budgetPixelRatio))
         const minimum = Math.min(maximum, Math.max(0.5, profile.pixelRatioFloor))
         // Use the capped device ratio as the baseline. On a 3x phone with a
