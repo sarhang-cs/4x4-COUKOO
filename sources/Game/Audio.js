@@ -19,6 +19,11 @@ export class Audio
         this.setVolume()
         this.setMute()
 
+        // One quality system controls the playlist source as well as rendering.
+        // High uses the retained lossless masters; Medium and Low keep the MP3
+        // files so mobile users do not download them by accident.
+        this.game.quality.events.on('change', () => this.refreshPlaylistQuality())
+
         this.game.ticker.events.on('tick', () =>
         {
             this.update()
@@ -184,43 +189,86 @@ export class Audio
         return item
     }
 
+    getPlaylistPath(song)
+    {
+        const assetProfile = this.game.quality.getAssetProfile()
+        return `${assetProfile.musicPath}/${song.id}.${assetProfile.musicFormat}`
+    }
+
+    createPlaylistHowl(song)
+    {
+        return new Howl({
+            src: [ song.path ],
+            pool: 0,
+            autoplay: false,
+            loop: false,
+            preload: false,
+            volume: 0.2,
+            onend: () =>
+            {
+                this.playlist?.next()
+            }
+        })
+    }
+
+    refreshPlaylistQuality()
+    {
+        if(!this.playlist)
+            return
+
+        // A disc transition deliberately lasts three seconds. If the player
+        // changes High/Medium while that transition is active, do not lose the
+        // request: apply the new MP3/WAV source immediately after it finishes.
+        if(this.playlist.switching)
+        {
+            this.playlist.qualityRefreshPending = true
+            return
+        }
+
+        const current = this.playlist.current
+        const wasPlaying = Boolean(current?.sound?.playing?.())
+
+        for(const song of this.playlist.songs)
+        {
+            const nextPath = this.getPlaylistPath(song)
+            if(song.path === nextPath)
+                continue
+
+            song.sound?.stop()
+            song.sound?.unload()
+            song.path = nextPath
+            song.name = `${song.id}.${this.game.quality.getAssetProfile().musicFormat}`
+            song.loaded = false
+            song.sound = this.createPlaylistHowl(song)
+        }
+
+        if(wasPlaying && current)
+        {
+            current.loaded = true
+            current.sound.load()
+            current.sound.play()
+        }
+    }
+
     setPlaylist()
     {
         this.playlist = {}
         this.playlist.songs = [
-            {
-                path: 'sounds/musics/Sudo.mp3',
-                name: 'Sudo.mp3'
-            },
-            {
-                path: 'sounds/musics/Boy.mp3',
-                name: 'Boy.mp3'
-            },
-            {
-                path: 'sounds/musics/Baguira.mp3',
-                name: 'Baguira.mp3'
-            },
+            { id: 'Sudo' },
+            { id: 'Boy' },
+            { id: 'Baguira' },
         ]
         this.playlist.index = (Math.floor(Date.now() / 1000 / 60 / 3) % this.playlist.songs.length) // Different music every X minutes
-        // this.playlist.index = -1 // Different music every X minutes
         this.playlist.current = null
         this.playlist.switching = false
+        this.playlist.qualityRefreshPending = false
 
         for(const song of this.playlist.songs)
         {
+            song.path = this.getPlaylistPath(song)
+            song.name = `${song.id}.${this.game.quality.getAssetProfile().musicFormat}`
             song.loaded = false
-            song.sound = new Howl({
-                src: [ song.path ],
-                pool: 0,
-                autoplay: false,
-                loop: false,
-                preload: false,
-                volume: 0.2,
-                onend: () =>
-                {
-                    this.playlist.next()
-                }
-            })
+            song.sound = this.createPlaylistHowl(song)
         }
 
         this.playlist.next = () =>
@@ -235,10 +283,8 @@ export class Audio
 
             // Old one
             if(this.playlist.current)
-            {
                 this.playlist.current.sound.stop()
-            }
-            
+
             gsap.delayedCall(3, () =>
             {
                 this.playlist.index++
@@ -251,6 +297,7 @@ export class Audio
 
                 if(!this.playlist.current.loaded)
                 {
+                    this.playlist.current.loaded = true
                     this.playlist.current.sound.load()
                 }
 
@@ -268,11 +315,15 @@ export class Audio
                     html,
                     'song',
                     5,
-                    // () => {
-                    // }
                 )
-                
+
                 this.playlist.switching = false
+
+                if(this.playlist.qualityRefreshPending)
+                {
+                    this.playlist.qualityRefreshPending = false
+                    this.refreshPlaylistQuality()
+                }
             })
         }
 
@@ -282,6 +333,7 @@ export class Audio
 
             if(!this.playlist.current.loaded)
             {
+                this.playlist.current.loaded = true
                 this.playlist.current.sound.load()
             }
 
@@ -289,9 +341,7 @@ export class Audio
         }
 
         if(import.meta.env.VITE_MUSIC)
-        {
             this.playlist.play()
-        }
     }
 
     setAmbiants()

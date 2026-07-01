@@ -200,9 +200,16 @@ assert(!existsSync(join(projectRoot, 'scripts/patch-three-webgl-ubo.js')), 'Lega
 
 const wavFiles = walk(staticRoot).filter((file) => file.endsWith('.wav'))
 const mp3Files = walk(staticRoot).filter((file) => file.endsWith('.mp3'))
-assert(wavFiles.length === 0, `Unused WAV assets remain: ${wavFiles.length}`)
+const highWavNames = wavFiles.map((file) => relative(staticRoot, file)).sort()
+assert(JSON.stringify(highWavNames) === JSON.stringify([ 'sounds/musics/high/Baguira.wav', 'sounds/musics/high/Boy.wav', 'sounds/musics/high/Sudo.wav' ]), `Expected three High lossless WAV assets, found: ${highWavNames.join(', ') || 'none'}`)
 assert(mp3Files.length === 88, `All 88 runtime MP3 assets must be preserved, found ${mp3Files.length}`)
 
+const qualityAssetSource = readFileSync(join(sourcesRoot, 'Game/Quality.js'), 'utf8')
+assert(qualityAssetSource.includes('getAssetProfile(level = this.level)'), 'Unified High/Medium/Low asset profile is missing')
+assert(qualityAssetSource.includes("musicFormat: 'wav'"), 'High lossless audio asset profile is missing')
+const qualityAudioSource = readFileSync(join(sourcesRoot, 'Game/Audio.js'), 'utf8')
+assert(qualityAudioSource.includes('refreshPlaylistQuality()'), 'Playlist does not refresh when graphics quality changes')
+assert(qualityAssetSource.includes("musicPath: 'sounds/musics/high'"), 'High preset does not route to the lossless music directory')
 
 // Bundle architecture: preserve real lazy boundaries instead of only raising
 // Vite's warning threshold. These assertions keep the split strategy intact.

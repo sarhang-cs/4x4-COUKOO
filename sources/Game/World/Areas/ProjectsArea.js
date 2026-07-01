@@ -468,7 +468,8 @@ export class ProjectsArea extends Area
         // Get resource and load
         this.images.getResourceAndLoad = (key) =>
         {
-            const path = `projects/images/${key}`
+            const assetProfile = this.game.quality.getAssetProfile()
+            const path = `projects/images/${key.replace(/\.ktx$/i, `.${assetProfile.textureExtension}`)}`
             
             // Try to retrieve resource
             let resource = this.images.resources.get(key)
@@ -479,7 +480,7 @@ export class ProjectsArea extends Area
                 resource = {}
                 resource.loaded = false
 
-                const loader = this.game.resourcesLoader.getLoader('textureKtx')
+                const loader = this.game.resourcesLoader.getLoader(assetProfile.textureLoader)
 
                 loader.load(
                     path,

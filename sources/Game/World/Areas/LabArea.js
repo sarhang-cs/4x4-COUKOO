@@ -454,7 +454,8 @@ export class LabArea extends Area
         // Get resource and load
         this.images.getResourceAndLoad = (key) =>
         {
-            const path = `lab/images/${key}`
+            const assetProfile = this.game.quality.getAssetProfile()
+            const path = `lab/images/${key.replace(/\.ktx$/i, `.${assetProfile.textureExtension}`)}`
             
             // Try to retrieve resource
             let resource = this.images.resources.get(key)
@@ -465,7 +466,7 @@ export class LabArea extends Area
                 resource = {}
                 resource.loaded = false
 
-                const loader = this.game.resourcesLoader.getLoader('textureKtx')
+                const loader = this.game.resourcesLoader.getLoader(assetProfile.textureLoader)
 
                 loader.load(
                     path,
@@ -838,10 +839,12 @@ export class LabArea extends Area
                         if(mini.startedLoading)
                             return
 
-                        const loader = this.game.resourcesLoader.getLoader('textureKtx')
+                        const assetProfile = this.game.quality.getAssetProfile()
+                        const loader = this.game.resourcesLoader.getLoader(assetProfile.textureLoader)
+                        const imagePath = `lab/images/${project.imageMini.replace(/\.ktx$/i, `.${assetProfile.textureExtension}`)}`
 
                         loader.load(
-                            `lab/images/${project.imageMini}`,
+                            imagePath,
                             (loadedTexture) =>
                             {
                                 const alpha = uniform(0)

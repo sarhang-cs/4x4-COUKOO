@@ -73,7 +73,7 @@ const siteMetadata = (siteUrl) => ({
  * Production uses KTX2/Draco variants. The source folder intentionally keeps
  * authoring fallbacks, while this plugin excludes duplicate files from dist.
  */
-const pruneProductionVariants = (enabled) => ({
+const pruneProductionVariants = ({ enabled, keepQualityVariants = false }) => ({
     name: 'prune-production-variants',
     writeBundle()
     {
@@ -96,25 +96,31 @@ const pruneProductionVariants = (enabled) => ({
             }
         }
 
-        for(const path of walk(distRoot))
+        // Keep both variants in this release. The quality profile chooses the
+        // appropriate files before resource loading starts.
+        if(!keepQualityVariants)
         {
-            const normalizedPath = normalizeId(path)
-            if(normalizedPath.endsWith('.glb') && !normalizedPath.endsWith('-compressed.glb') && !normalizedPath.endsWith('/areas/areas.glb'))
+            for(const path of walk(distRoot))
             {
-                const compressedPath = path.replace(/\.glb$/, '-compressed.glb')
-                if(existsSync(compressedPath))
-                    remove(path)
-            }
-            else if(path.endsWith('.png'))
-            {
-                const compressedPath = path.replace(/\.png$/, '.ktx')
-                if(existsSync(compressedPath))
-                    remove(path)
+                const normalizedPath = normalizeId(path)
+                if(normalizedPath.endsWith('.glb') && !normalizedPath.endsWith('-compressed.glb') && !normalizedPath.endsWith('/areas/areas.glb'))
+                {
+                    const compressedPath = path.replace(/\.glb$/, '-compressed.glb')
+                    if(existsSync(compressedPath))
+                        remove(path)
+                }
+                else if(path.endsWith('.png'))
+                {
+                    const compressedPath = path.replace(/\.png$/, '.ktx')
+                    if(existsSync(compressedPath))
+                        remove(path)
+                }
             }
         }
 
-        // The validated landing scene currently needs the uncompressed areas GLB.
-        remove(join(distRoot, 'areas/areas-compressed.glb'))
+        // The validated landing scene always uses its full GLB. Low retains the
+        // validated landing scene too, so its unused compressed alternate is omitted.
+        remove(join(distRoot, 'areas', 'areas-compressed.glb'))
 
         // These are source-only documentation and legacy font formats. Modern
         // target browsers use WOFF2, and no runtime URL references these files.
@@ -179,6 +185,7 @@ export default defineConfig(({ mode }) =>
 {
     const env = loadEnv(mode, process.cwd(), '')
     const compressedProduction = env.VITE_COMPRESSED === '1'
+    const keepQualityVariants = env.VITE_MULTI_QUALITY_ASSETS === '1'
 
     return {
         root: 'sources/',
@@ -212,7 +219,7 @@ export default defineConfig(({ mode }) =>
         [
             siteMetadata(env.VITE_SITE_URL),
             wasm(),
-            pruneProductionVariants(compressedProduction),
+            pruneProductionVariants({ enabled: compressedProduction, keepQualityVariants }),
         ]
     }
 })

@@ -21,12 +21,12 @@ const fonts = read('sources/style/fonts.styl')
 
 assert(/VITE_COMPRESSED=1/.test(productionEnv), 'Production must enable compressed assets')
 assert(/areas\/areas\.glb/.test(game), 'Areas model must use the validated landing-scene GLB')
-assert(/vehicle\/oldSchool\$\{compressedModelSuffix\}\.glb/.test(konami), 'Konami vehicle must use compressed production variant')
+assert(/getAssetProfile\(\)\.modelSuffix/.test(konami), 'Konami vehicle must use the unified quality asset profile')
 assert(/getConcurrency\(\)/.test(loader), 'ResourcesLoader concurrency guard is missing')
 assert(/adaptiveResolution: true/.test(quality), 'Quality profiles must support adaptive resolution')
 assert(/baselinePixelRatio/.test(rendering), 'Adaptive pixel-ratio baseline is missing')
 assert(/setVisibilityHandling/.test(rendering), 'Background rendering pause handler is missing')
-assert(/pruneProductionVariants/.test(vite), 'Production asset-pruning plugin is missing')
+assert(/pruneProductionVariants/.test(vite) && /keepQualityVariants/.test(vite), 'Production quality-variant preservation is missing')
 assert(!/\.woff'\)|\.ttf'\)/.test(fonts), 'Legacy font formats should not be requested')
 
 for(const file of [

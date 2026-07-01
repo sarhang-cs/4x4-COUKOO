@@ -93,6 +93,11 @@ export class Game
         this.save = new Save()
         this.haptics = new Haptics()
         this.quality = new Quality()
+        this.quality.events.on('change', (_level, _profile, details) =>
+        {
+            if(details?.requiresWorldReload)
+                this.reloadForQualityAssets(details.assetProfile)
+        })
         this.server = new Server()
         this.ticker = new Ticker()
         this.time = new Time()
@@ -112,10 +117,13 @@ export class Game
         this.startupScreen?.setStage('Loading the starting area')
         this.startupScreen?.setProgress(18)
 
-        const compressed = import.meta.env.VITE_COMPRESSED === '1'
-        const compressedModelSuffix = compressed ? '-compressed' : ''
-        const compressedTextureFormat = compressed ? 'textureKtx' : 'texture'
-        const compressedTextureExtension = compressed ? 'ktx' : 'png'
+        // High and Medium retain the full original PNG/GLB runtime assets.
+        // Low keeps the existing Phase 10 KTX/Draco variants. The selected
+        // profile is read before any world resource starts loading.
+        const assetProfile = this.quality.getAssetProfile()
+        const compressedModelSuffix = assetProfile.modelSuffix
+        const compressedTextureFormat = assetProfile.textureLoader
+        const compressedTextureExtension = assetProfile.textureExtension
 
         const cb = '?cb=1'
         this.resources = await this.resourcesLoader.load([
@@ -250,6 +258,22 @@ export class Game
         {
             this.achievements.setProgress('debug', 1)
         }
+    }
+
+    reloadForQualityAssets(assetProfile)
+    {
+        if(this.qualityAssetReloadScheduled)
+            return
+
+        this.qualityAssetReloadScheduled = true
+        const label = assetProfile?.label ?? 'selected'
+        this.notifications?.show(
+            `<div class="top"><div class="title">Graphics preset saved</div></div><div class="bottom"><div class="description">Loading ${label} world assets…</div></div>`,
+            'quality-assets',
+            2
+        )
+
+        window.setTimeout(() => window.location.reload(), 650)
     }
 
     reset()

@@ -128,6 +128,59 @@ export class Quality
         return 'High'
     }
 
+    getAssetProfile(level = this.level)
+    {
+        if(level === QUALITY_LEVELS.HIGH)
+        {
+            return {
+                level,
+                id: 'high-full',
+                label: 'Full archive',
+                musicFormat: 'wav',
+                musicPath: 'sounds/musics/high',
+                modelSuffix: '',
+                textureLoader: 'texture',
+                textureExtension: 'png',
+                compressedAssets: false,
+                description: 'Full archive quality: lossless music, maximum renderer profile, and all season, weather, animation, particle, and world effects.',
+            }
+        }
+
+        if(level === QUALITY_LEVELS.MEDIUM)
+        {
+            return {
+                level,
+                id: 'medium-original',
+                label: 'Original balanced',
+                musicFormat: 'mp3',
+                musicPath: 'sounds/musics',
+                modelSuffix: '',
+                textureLoader: 'texture',
+                textureExtension: 'png',
+                compressedAssets: false,
+                description: 'Original balanced archive: complete driving world with compressed music and a balanced renderer profile.',
+            }
+        }
+
+        return {
+            level,
+            id: 'low-phase10',
+            label: 'Phase 10 optimized',
+            musicFormat: 'mp3',
+            musicPath: 'sounds/musics',
+            modelSuffix: '-compressed',
+            textureLoader: 'textureKtx',
+            textureExtension: 'ktx',
+            compressedAssets: true,
+            description: 'Phase 10 optimized: the lightweight mobile profile with the same gameplay, save, missions, weather, season, and accessibility systems.',
+        }
+    }
+
+    getPresetDescription(level = this.level)
+    {
+        return this.getAssetProfile(level).description
+    }
+
     getNextLevel()
     {
         const order = [ QUALITY_LEVELS.HIGH, QUALITY_LEVELS.MEDIUM, QUALITY_LEVELS.LOW ]
@@ -352,9 +405,13 @@ export class Quality
         if(nextLevel === this.level)
             return
 
+        const previousAssetProfile = this.getAssetProfile(this.level)
         this.level = nextLevel
+        const assetProfile = this.getAssetProfile()
+        const requiresWorldReload = previousAssetProfile.compressedAssets !== assetProfile.compressedAssets
+
         this.game.save.set('settings.quality', this.level, { immediate: true })
-        this.events.trigger('change', [ this.level, this.getProfile() ])
+        this.events.trigger('change', [ this.level, this.getProfile(), { previousAssetProfile, assetProfile, requiresWorldReload } ])
     }
 
     setShadowMode(mode = 'auto')

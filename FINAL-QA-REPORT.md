@@ -1,41 +1,51 @@
-# 4X4 COUKOO — Phase 10 Final QA Report
+# Final QA Report — 4X4 COUKOO v1.13.1
 
-## Scope
+## Unified graphics system
 
-Phase 10 prepares the finished static game for production distribution without adding heavyweight 3D content:
+One saved Graphics setting controls all three runtime profiles:
 
-- Installable PWA manifest and icons
-- Root-scoped service worker with versioned caches, offline app shell, runtime asset caching, and safe updates
-- Install App / Offline Play status controls in Options
-- iOS Add to Home Screen guidance
-- Portable SEO, canonical, Open Graph, Twitter, favicon, and share-card metadata
-- GitHub Pages, Netlify, and Vercel deployment compatibility
-- Optional public-URL configuration through `VITE_SITE_URL`
+- **High / Full archive** — full PNG + GLB runtime assets, lossless 24-bit / 48 kHz WAV music, and the maximum renderer profile.
+- **Medium / Original balanced** — full PNG + GLB runtime assets, original MP3 music, and the balanced renderer profile.
+- **Low / Phase 10 optimized** — KTX + Draco runtime assets, MP3 music, and the lightweight mobile renderer profile.
 
-## Automated checks
+Low ↔ Medium/High saves the choice and reloads once so the correct model and texture family is loaded. High ↔ Medium keeps the same full world assets and changes renderer/music behavior without reloading the world.
 
-| Check | Result |
-| --- | --- |
-| `npm test` | PASS — Phases 1–10 |
-| `npm run verify` | PASS — 166 source files checked |
-| `npm run build` | PASS — 416 modules transformed |
-| `npm run release-check` | PASS — production audit passed |
-| `npm audit --omit=dev --audit-level=high` | PASS — 0 vulnerabilities |
+## Final audit result
+
+### Fixed
+
+A High/Medium music-quality change made during the three-second jukebox disc transition could previously be ignored. The request is now queued and applied immediately after the transition finishes.
+
+The service-worker cache namespace is now `4x4-coukoo-v1.13.1`, ensuring installed users receive this audited release rather than retaining the earlier cache namespace.
+
+### Confirmed present
+
+- Season, day/night, weather, rain, snow, fog, lightning, tornado, particles, animation, world systems, missions, garage, save, PWA, and Phase 10 UX systems.
+- Every startup resource resolves for **High**, **Medium**, and **Low** profiles.
+- High WAV masters are valid stereo PCM files and their production checksums exactly match their source files.
+
+### Confirmed excluded
+
+No Blender/Photoshop/GarageBand/reference/preview/Bruno authoring asset is shipped in the static or deploy runtime:
+
+- `.blend`, `.blend1`
+- `.psd`
+- `.band`
+- `.pur`
+- `.mp4`
+- files named with `bruno`
+
+## Validation
+
+- `npm test` — PASS (Phases 1–12)
+- `npm run verify` — PASS (166 source files)
+- `npm run build` — PASS
+- `node scripts/release-audit.js` — PASS
+- `npm audit --omit=dev --audit-level=high` — 0 vulnerabilities
 
 ## Production output
 
-- 136 duplicate/source-only production files pruned: **24.31 MB** removed.
-- Production release audit confirmed the game chunks, validated `areas.glb`, the manifest, service worker, offline page, and resolved metadata placeholders.
-- The expected Three.js engine bundle remains above Vite’s 1.5 MB advisory threshold; this is an existing performance trade-off and does not fail the build.
-
-## Deployment notes
-
-- The PWA requires HTTPS or localhost. GitHub Pages, Netlify, and Vercel provide HTTPS.
-- On first visit, the service worker prepares the offline shell. Game assets cache only after they download successfully, subject to device storage capacity.
-- Set `VITE_SITE_URL` to the real public URL before a final hosted build when absolute canonical and social-preview URLs are required. When it is blank, the build uses portable relative paths suitable for GitHub Pages project URLs.
-- The package engine range is `>=22.12.0 <25`; production build and QA were executed successfully on Node 22.16.0.
-- Physical-device verification remains necessary for Web Share, PWA installation prompt, iOS Add to Home Screen, offline behavior under real storage limits, controller behavior, and Low/Medium/High graphics presets.
-
-## Privacy note
-
-No analytics or third-party tracking SDK was added. Analytics should only be introduced after selecting a provider, endpoint, privacy policy, and consent approach.
+- Both PNG/GLB and KTX/Draco runtime families are included.
+- 88 MP3 files and 3 High WAV masters are included.
+- 967 production files were checked.
+- The only build notice is the expected `engine-three` JavaScript chunk above 1.5 MB; it is a performance advisory, not a failed build.

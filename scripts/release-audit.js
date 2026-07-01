@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto'
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 
@@ -87,12 +88,17 @@ if(existsSync(areasPath))
 }
 
 const staticFiles = walk(staticRoot)
+const forbiddenRuntimePattern = /(?:^|\/)(?:[^/]*bruno[^/]*|[^/]+\.(?:blend1?|psd|band|pur|mp4))$/i
+for(const file of staticFiles)
+    assert(!forbiddenRuntimePattern.test(file.replace(`${projectRoot}/`, '').replaceAll('\\', '/')), `Authoring-only or Bruno asset is shipped: ${file}`)
 const audioFiles = staticFiles.filter((file) => file.endsWith('.mp3'))
 const wavFiles = staticFiles.filter((file) => file.endsWith('.wav'))
 const glbFiles = staticFiles.filter((file) => file.endsWith('.glb'))
 const ktxFiles = staticFiles.filter((file) => file.endsWith('.ktx'))
 assert(audioFiles.length === 88, `Expected 88 MP3 files, found ${audioFiles.length}`)
-assert(wavFiles.length === 0, `Unused WAV files remain: ${wavFiles.length}`)
+const highWavNames = wavFiles.map((file) => file.replace(`${staticRoot}/sounds/musics/high/`, '')).sort()
+assert(JSON.stringify(highWavNames) === JSON.stringify([ 'Baguira.wav', 'Boy.wav', 'Sudo.wav' ]), `Expected three High lossless WAV files, found: ${highWavNames.join(', ') || 'none'}`)
+assert(wavFiles.every((file) => file.startsWith(join(staticRoot, 'sounds', 'musics', 'high'))), 'WAV files must only exist in the High music directory')
 assert(glbFiles.length > 0, 'No GLB assets were found')
 assert(ktxFiles.length > 0, 'No KTX assets were found')
 
@@ -104,23 +110,62 @@ const distIndex = existsSync(join(distRoot, 'index.html')) ? readFileSync(join(d
 assert(!distIndex.includes('__COUKOO_'), 'Production metadata still contains unresolved URL placeholders')
 assert(distIndex.includes('manifest.webmanifest'), 'Production HTML does not link the web app manifest')
 const distFiles = existsSync(distRoot) ? walk(distRoot) : []
+for(const file of distFiles)
+    assert(!forbiddenRuntimePattern.test(file.replace(`${distRoot}/`, '').replaceAll('\\', '/')), `Authoring-only or Bruno file reached production: ${file}`)
 const distAssetNames = distFiles.map((file) => file.split('/').at(-1))
 
-// Production deliberately uses compressed resource pairs. Keep the one validated
-// landing scene exception, and make regressions in deploy-package pruning visible.
-for(const file of distFiles)
-{
-    if(file.endsWith('.glb') && !file.endsWith('-compressed.glb') && !file.endsWith('/areas/areas.glb'))
-    {
-        const compressedVariant = file.replace(/\.glb$/, '-compressed.glb')
-        assert(!existsSync(compressedVariant), `Duplicate uncompressed GLB remains in dist: ${file.replace(`${distRoot}/`, '')}`)
-    }
+// Verify every bootstrap resource has a concrete High/Medium/Low counterpart.
+// Keeping this derived from Game.js prevents a later asset addition from being
+// checked for only one graphics preset.
+const gameSource = readFileSync(join(projectRoot, 'sources', 'Game', 'Game.js'), 'utf8')
+const qualityTemplates = [ ...gameSource.matchAll(/`([^`]*(?:\$\{compressedModelSuffix\}|\$\{compressedTextureExtension\})[^`]*)`/g) ]
+    .map((match) => match[1])
+    .filter((value) => value.includes('.glb') || value.includes('${compressedTextureExtension}'))
+const runtimeProfiles = [
+    { name: 'High', modelSuffix: '', textureExtension: 'png' },
+    { name: 'Medium', modelSuffix: '', textureExtension: 'png' },
+    { name: 'Low', modelSuffix: '-compressed', textureExtension: 'ktx' },
+]
 
-    if(file.endsWith('.png'))
+for(const profile of runtimeProfiles)
+{
+    for(const template of qualityTemplates)
     {
-        const compressedVariant = file.replace(/\.png$/, '.ktx')
-        assert(!existsSync(compressedVariant), `Duplicate PNG/KTX texture remains in dist: ${file.replace(`${distRoot}/`, '')}`)
+        const relativePath = template
+            .replaceAll('${compressedModelSuffix}', profile.modelSuffix)
+            .replaceAll('${compressedTextureExtension}', profile.textureExtension)
+            .replaceAll('${cb}', '')
+            .replace('?cb=1', '')
+        assert(existsSync(join(staticRoot, relativePath)), `${profile.name} source asset is missing: ${relativePath}`)
+        assert(existsSync(join(distRoot, relativePath)), `${profile.name} production asset is missing: ${relativePath}`)
     }
+}
+
+// High's retained WAV masters must arrive byte-for-byte in production.
+for(const file of [ 'Baguira.wav', 'Boy.wav', 'Sudo.wav' ])
+{
+    const sourcePath = join(staticRoot, 'sounds', 'musics', 'high', file)
+    const productionPath = join(distRoot, 'sounds', 'musics', 'high', file)
+    if(existsSync(sourcePath) && existsSync(productionPath))
+    {
+        const sourceHash = createHash('sha256').update(readFileSync(sourcePath)).digest('hex')
+        const productionHash = createHash('sha256').update(readFileSync(productionPath)).digest('hex')
+        assert(sourceHash === productionHash, `High WAV master changed during production build: ${file}`)
+    }
+}
+
+// The release deliberately keeps both full and compressed runtime variants.
+// High/Medium load PNG + GLB; Low loads KTX + Draco on the next launch.
+for(const [ full, compressed ] of [
+    [ 'vehicle/default.glb', 'vehicle/default-compressed.glb' ],
+    [ 'vehicle/oldSchool.glb', 'vehicle/oldSchool-compressed.glb' ],
+    [ 'terrain/terrain.png', 'terrain/terrain.ktx' ],
+    [ 'lab/images/black-hole.png', 'lab/images/black-hole.ktx' ],
+    [ 'projects/images/threejs-journey-1.png', 'projects/images/threejs-journey-1.ktx' ],
+])
+{
+    assert(existsSync(join(distRoot, full)), `Full quality asset is missing: ${full}`)
+    assert(existsSync(join(distRoot, compressed)), `Low quality asset is missing: ${compressed}`)
 }
 assert(existsSync(join(distRoot, 'areas', 'areas.glb')), 'Validated landing areas.glb is missing from production output')
 assert(!existsSync(join(distRoot, 'areas', 'areas-compressed.glb')), 'Invalid compressed landing areas variant must not ship')

@@ -1,3 +1,8 @@
+# 4X4 COUKOO v1.13.0
+## Unified three-tier quality release
+
+High uses the retained lossless music masters and the highest renderer profile. Medium uses the supplied balanced archive behaviour. Low keeps the existing Phase 10 optimized profile. Weather, seasons, world animation, effects, missions, saves, PWA, and all gameplay systems remain one shared runtime.
+
 # 4X4 COUKOO — Phase 10 Release Notes
 
 Phase 10 makes the static production build installable and safer to publish.
@@ -25,3 +30,8 @@ The deploy ZIP works without this variable; it falls back to portable relative U
 - The initial 3D launch still requires an internet connection. Game assets are then cached after successful loading, subject to the browser's available storage.
 - No analytics or tracking SDK is included. Adding analytics needs a separate provider, endpoint, consent decision, and privacy policy.
 - The PWA install and service worker require HTTPS (GitHub Pages, Netlify, and Vercel all provide it).
+
+## v1.13.1 — Final quality audit
+
+- Fixed the only runtime issue found in the unified quality review: playlist quality changes are retained during a jukebox disc transition.
+- Updated the PWA cache version so installed users receive this build.

@@ -1,5 +1,5 @@
 /* 4X4 COUKOO offline shell. Runtime files are cached after first successful load. */
-const CACHE_VERSION = '4x4-coukoo-v1.12.0'
+const CACHE_VERSION = '4x4-coukoo-v1.13.1'
 const CORE_CACHE = `${CACHE_VERSION}-core`
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`
 const CORE_FILES = [
@@ -11,7 +11,7 @@ const CORE_FILES = [
     './favicons/web-app-manifest-192x192.png',
     './favicons/web-app-manifest-512x512.png',
 ]
-const CACHEABLE_TYPES = /\.(?:js|css|woff2?|ttf|eot|svg|png|jpe?g|webp|ico|webmanifest|glb|ktx|wasm|mp3)$/i
+const CACHEABLE_TYPES = /\.(?:js|css|woff2?|ttf|eot|svg|png|jpe?g|webp|ico|webmanifest|glb|ktx|wasm|mp3|wav)$/i
 
 const isCacheable = (request, url) =>
     request.method === 'GET'

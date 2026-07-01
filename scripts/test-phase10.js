@@ -51,7 +51,7 @@ check(/CORE_FILES/.test(serviceWorker) && /offline\.html/.test(serviceWorker), '
 check(/RUNTIME_CACHE/.test(serviceWorker) && /cachePut/.test(serviceWorker), 'Runtime asset cache is missing from service worker')
 check(/SKIP_WAITING/.test(serviceWorker) && /clients\.claim/.test(serviceWorker), 'Service worker activation flow is incomplete')
 check(/test:phase10/.test(pkg.scripts.test), 'Phase 10 tests are not included in npm test')
-check(pkg.version === '1.12.0', 'Phase 10 package version must be 1.12.0')
+check(/^1\.(?:1[2-9]|[2-9]\d)\.\d+$/.test(pkg.version), 'Phase 10 package version must be 1.12.0 or later')
 
 if(failures.length)
 {

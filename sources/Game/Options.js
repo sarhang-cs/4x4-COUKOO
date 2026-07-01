@@ -55,11 +55,16 @@ export class Options
     {
         const element = this.element.querySelector('.js-quality-toggle')
         const text = element.querySelector('span')
+        const tooltip = element.querySelector('.tooltip')
         const update = () =>
         {
             const label = this.game.quality.getLabel()
+            const assetProfile = this.game.quality.getAssetProfile()
             text.textContent = label
+            element.dataset.qualitySource = assetProfile.id
             element.setAttribute('aria-label', `Graphics preset: ${label}. Tap to change.`)
+            if(tooltip)
+                tooltip.textContent = assetProfile.description
         }
 
         element.addEventListener('click', () => this.game.quality.changeLevel(this.game.quality.getNextLevel()))
@@ -89,7 +94,8 @@ export class Options
             const renderer = this.game.rendering?.renderer?.backend?.isWebGLBackend ? 'WebGL' : 'WebGPU'
             const ratio = this.game.rendering?.activePixelRatio
             const ratioText = Number.isFinite(ratio) && ratio > 0 ? ` · ${ratio.toFixed(2)}x render` : ''
-            performanceText.textContent = `${renderer} · ${profile.name}${ratioText}`
+            const assetProfile = this.game.quality.getAssetProfile()
+            performanceText.textContent = `${renderer} · ${profile.name} · ${assetProfile.label}${ratioText}`
         }
 
         fpsElement.addEventListener('click', () => this.game.quality.cycleFpsLimit())

@@ -1,3 +1,10 @@
+# 1.13.0 — Unified High / Medium / Low quality assets
+
+- High preset uses full-archive lossless music assets.
+- Medium uses the balanced original archive profile.
+- Low keeps the Phase 10 optimized profile.
+- One runtime and one saved quality system controls all three presets.
+
 # Changelog
 
 ## Phase 10 — PWA, Offline Shell & Production Launch Readiness
@@ -77,3 +84,9 @@
 - Persists mission progress, coin balance, total coins, vehicle ownership, and equipped vehicle in the versioned device save.
 - Added Phase 8 regression coverage for missions, garage UI, and vehicle equip flow.
 
+
+## 1.13.1 — Final quality audit
+
+- Fixed queued High/Medium playlist asset changes during jukebox disc transitions.
+- Bumped the PWA cache namespace for reliable release updates.
+- Added final regression coverage for unified-quality asset behavior.

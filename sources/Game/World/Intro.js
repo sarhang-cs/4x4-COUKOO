@@ -148,9 +148,9 @@ export class Intro
             let cachedTexture = this.text.textures.get(name)
             if(!cachedTexture)
             {
-                const loader = this.game.resourcesLoader.getLoader('textureKtx')
-                
-                const resourcePath = `intro/${name}Label.ktx`
+                const assetProfile = this.game.quality.getAssetProfile()
+                const loader = this.game.resourcesLoader.getLoader(assetProfile.textureLoader)
+                const resourcePath = `intro/${name}Label.${assetProfile.textureExtension}`
                 loader.load(
                     resourcePath,
                     (loadedTexture) =>

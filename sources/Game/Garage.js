@@ -154,7 +154,7 @@ export class Garage
             let model = this.game.resources.vehicle?.scene
             if(vehicle.file !== 'default')
             {
-                const compressedModelSuffix = import.meta.env.VITE_COMPRESSED === '1' ? '-compressed' : ''
+                const compressedModelSuffix = this.game.quality.getAssetProfile().modelSuffix
                 const resources = await this.game.resourcesLoader.load([
                     [ 'garageVehicle', `vehicle/${vehicle.file}${compressedModelSuffix}.glb?garage=${Date.now()}`, 'gltf' ],
                 ])
