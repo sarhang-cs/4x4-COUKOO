@@ -10,6 +10,7 @@ import { alea } from 'seedrandom'
 import { InputFlag } from '../../InputFlag.js'
 import { Area } from './Area.js'
 import { timeToRaceString, timeToReadableString } from '../../utilities/time.js'
+import { normalizeCircuitLeaderboard, normalizeCircuitResetTime } from '../../utilities/leaderboard.js'
 
 export class CircuitArea extends Area
 {
@@ -854,8 +855,10 @@ export class CircuitArea extends Area
         const loadedFlags = new Map()
         const flagsWidth = 54
         const flagsHeight = 36
-        this.leaderboard.update = (scores = null) =>
+        this.leaderboard.update = (rawScores = null) =>
         {
+            const scores = normalizeCircuitLeaderboard(rawScores)
+
             const draw = () =>
             {
                 // Clear
@@ -1032,8 +1035,17 @@ export class CircuitArea extends Area
         const mesh = this.references.items.get('leaderboardReset')[0]
         mesh.material = material
 
-        this.resetTime.activate = (resetTime = 0) =>
+        this.resetTime.activate = (rawResetTime = 0) =>
         {
+            const resetTime = normalizeCircuitResetTime(rawResetTime)
+
+            if(resetTime === null)
+            {
+                this.resetTime.deactivate()
+                return
+            }
+
+            clearInterval(this.resetTime.interval)
             this.resetTime.isActive = true
             this.resetTime.resetTime = resetTime
 
@@ -1043,9 +1055,11 @@ export class CircuitArea extends Area
 
         this.resetTime.deactivate = () =>
         {
-            this.resetTime.isActive = true
+            this.resetTime.isActive = false
+            this.resetTime.resetTime = null
             this.resetTime.lastTimeDrawn = null
             clearInterval(this.resetTime.interval)
+            this.resetTime.interval = null
             this.resetTime.draw(null)
         }
 
@@ -1151,57 +1165,72 @@ export class CircuitArea extends Area
         this.menu.leaderboardContainerElement = this.menu.instance.contentElement.querySelector('.js-leaderboard-container')
         this.menu.leaderboardElement = this.menu.leaderboardContainerElement.querySelector('.js-leaderboard tbody')
         this.menu.racingButtons = this.menu.instance.contentElement.querySelector('.js-racing-buttons')
-        this.menu.leaderboardNeedsUpdate = false
+        // `undefined` means no pending redraw. `null` is a valid offline state.
+        this.menu.leaderboardNeedsUpdate = undefined
 
         this.menu.instance.events.on('open', () =>
         {
-            if(this.menu.leaderboardNeedsUpdate)
+            if(this.menu.leaderboardNeedsUpdate !== undefined)
                 this.menu.updateLeaderboard(this.menu.leaderboardNeedsUpdate)
         })
 
-        this.menu.updateLeaderboard = (scores = null) =>
+        this.menu.updateLeaderboard = (rawScores = null) =>
         {
-            // Menu not open => Set flag
+            const scores = normalizeCircuitLeaderboard(rawScores)
+
+            // Menu not open => Remember the newest state, including offline.
             if(!this.menu.instance.isOpen)
             {
                 this.menu.leaderboardNeedsUpdate = scores
+                return
             }
 
-            // Menu open => Update content
-            else
+            // Build DOM nodes rather than interpolating server-provided values.
+            const fragment = document.createDocumentFragment()
+
+            if(Array.isArray(scores))
             {
-                let html = ''
                 let rank = 1
-                
+
                 for(const score of scores)
                 {
-                    let flag = ''
+                    const row = document.createElement('tr')
+                    const rankCell = document.createElement('td')
+                    const flagCell = document.createElement('td')
+                    const tagCell = document.createElement('td')
+                    const durationCell = document.createElement('td')
                     const country = this.menu.inputFlag.countries.get(score[1])
 
+                    rankCell.textContent = rank
+
                     if(country)
-                        flag = /* html */`<img width="27" height="18" src="${country.imageUrl}" loading="lazy">`
+                    {
+                        const image = document.createElement('img')
+                        image.width = 27
+                        image.height = 18
+                        image.src = country.imageUrl
+                        image.loading = 'lazy'
+                        image.alt = `${country.code} flag`
+                        flagCell.append(image)
+                    }
 
-                    html += /* html */`
-                        <tr>
-                            <td>${rank}</td>
-                            <td>${flag}</td>
-                            <td>${score[0]}</td>
-                            <td>${timeToRaceString(score[2] / 1000)}</td>
-                        </tr>
-                    `
+                    tagCell.textContent = score[0]
+                    durationCell.textContent = timeToRaceString(score[2] / 1000)
 
+                    row.append(rankCell, flagCell, tagCell, durationCell)
+                    fragment.append(row)
                     rank++
                 }
-
-                this.menu.leaderboardElement.innerHTML = html
-
-                if(scores.length)
-                    this.menu.leaderboardContainerElement.classList.remove('has-no-score')
-                else
-                    this.menu.leaderboardContainerElement.classList.add('has-no-score')
-
-                this.menu.leaderboardNeedsUpdate = false
             }
+
+            this.menu.leaderboardElement.replaceChildren(fragment)
+
+            if(Array.isArray(scores) && scores.length)
+                this.menu.leaderboardContainerElement.classList.remove('has-no-score')
+            else
+                this.menu.leaderboardContainerElement.classList.add('has-no-score')
+
+            this.menu.leaderboardNeedsUpdate = undefined
         }
         
         // Restart button
@@ -1248,6 +1277,15 @@ export class CircuitArea extends Area
         this.endModal = {}
         this.endModal.instance = this.game.modals.items.get('circuit-end')
         this.endModal.timeElement = this.endModal.instance.element.querySelector('.js-time')
+        this.endModal.bestElement = this.endModal.instance.element.querySelector('.js-circuit-personal-best')
+        this.endModal.shareElement = this.endModal.instance.element.querySelector('.js-button-share')
+        this.endModal.result = null
+
+        this.endModal.shareElement?.addEventListener('click', () =>
+        {
+            if(this.endModal.result)
+                this.game.socialShare?.shareCircuitRun(this.endModal.result)
+        })
         
         // Restart button
         const restartElement = this.endModal.instance.element.querySelector('.js-button-restart')
@@ -1346,6 +1384,70 @@ export class CircuitArea extends Area
          * Flag
          */
         this.menu.inputFlag = new InputFlag(this.menu.inputGroup.querySelector('.js-input-flag'))
+    }
+
+    getCircuitDayKey(timestamp = Date.now())
+    {
+        const date = new Date(timestamp)
+        const year = date.getFullYear()
+        const month = String(date.getMonth() + 1).padStart(2, '0')
+        const day = String(date.getDate()).padStart(2, '0')
+        return `${year}-${month}-${day}`
+    }
+
+    recordCircuitResult(durationMs)
+    {
+        const duration = Math.round(Number(durationMs))
+        if(!Number.isFinite(duration) || duration <= 0 || duration > 86_400_000)
+            return null
+
+        const now = Date.now()
+        const dayKey = this.getCircuitDayKey(now)
+        const previous = this.game.save.get('progress.circuit', {})
+        const previousBest = Number(previous?.bestTimeMs) || 0
+        const previousTodayBest = previous?.todayKey === dayKey ? Number(previous?.todayBestTimeMs) || 0 : 0
+        const isPersonalBest = previousBest === 0 || duration < previousBest
+        const isDailyBest = previousTodayBest === 0 || duration < previousTodayBest
+        const result = {
+            durationMs: duration,
+            isPersonalBest,
+            isDailyBest,
+            personalBestMs: isPersonalBest ? duration : previousBest,
+            todayBestMs: isDailyBest ? duration : previousTodayBest,
+        }
+
+        this.game.save.set('progress.circuit', {
+            bestTimeMs: result.personalBestMs,
+            lastTimeMs: duration,
+            lastRunAt: now,
+            runs: Math.max(0, Math.floor(Number(previous?.runs) || 0)) + 1,
+            todayKey: dayKey,
+            todayBestTimeMs: result.todayBestMs,
+        }, { immediate: true })
+
+        this.endModal.result = result
+        this.updateEndModalResult(result)
+        return result
+    }
+
+    updateEndModalResult(result = this.endModal?.result)
+    {
+        const element = this.endModal?.bestElement
+        if(!element)
+            return
+
+        if(!result)
+        {
+            element.textContent = ''
+            element.classList.remove('is-visible')
+            return
+        }
+
+        const label = result.isPersonalBest
+            ? `New personal best · ${timeToRaceString(result.durationMs / 1000)}`
+            : `Personal best · ${timeToRaceString(result.personalBestMs / 1000)}`
+        element.textContent = label
+        element.classList.add('is-visible')
     }
 
     restart()
@@ -1468,6 +1570,9 @@ export class CircuitArea extends Area
         // Server message event
         this.game.server.events.on('message', (data) =>
         {
+            if(!data || typeof data !== 'object')
+                return
+
             // Init and insert
             if(data.type === 'init')
             {
@@ -1520,6 +1625,8 @@ export class CircuitArea extends Area
         this.timer.end()
         if(forced)
             this.timer.hide()
+        else
+            this.recordCircuitResult(Math.round(this.timer.elapsedTime * 1000))
 
         // Checkpoints
         this.checkpoints.target = null
@@ -1602,13 +1709,14 @@ export class CircuitArea extends Area
                     })
                 }
 
-                // Circuit en modal (if server connected)
-                if(this.game.server.connected && !forced)
+                // Circuit end modal: score sharing and local personal-best feedback
+                // work offline; the official leaderboard form remains online-only.
+                if(!forced)
                 {
                     gsap.delayedCall(1, () =>
                     {
-                        // In top 10
-                        if(this.leaderboard.scores === null || this.leaderboard.scores.length < 10 || this.timer.elapsedTime * 1000 < this.leaderboard.maxTime)
+                        // In top 10 (only meaningful when the official server is connected)
+                        if(this.game.server.connected && (this.leaderboard.scores === null || this.leaderboard.scores.length < 10 || this.timer.elapsedTime * 1000 < this.leaderboard.maxTime))
                             this.endModal.instance.element.classList.add('is-top-10')
                         else
                             this.endModal.instance.element.classList.remove('is-top-10')

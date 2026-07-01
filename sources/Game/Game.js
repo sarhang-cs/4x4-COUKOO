@@ -46,6 +46,16 @@ import { PreRenderer } from './PreRenderer.js'
 import { Options } from './Options.js'
 import gsap from 'gsap'
 import { Map } from './Map.js'
+import { Save } from './Save.js'
+import { Haptics } from './Haptics.js'
+import { Tutorial } from './Tutorial.js'
+import { Pause } from './Pause.js'
+import { VisualEffects } from './VisualEffects.js'
+import { Missions } from './Missions.js'
+import { Garage } from './Garage.js'
+import { DailyRewards } from './DailyRewards.js'
+import { SocialShare } from './SocialShare.js'
+import { ControllerStatus } from './ControllerStatus.js'
 
 export class Game
 {
@@ -54,15 +64,15 @@ export class Game
         return Game.instance
     }
 
-    constructor()
+    constructor(_options = {})
     {
         // Singleton
         if(Game.instance)
             return Game.instance
 
         Game.instance = this
-
-        this.init()
+        this.startupScreen = _options.startupScreen ?? window.coukooStartupScreen ?? null
+        this.ready = this.init()
     }
 
     async init()
@@ -70,6 +80,8 @@ export class Game
         // Setup
         this.domElement = document.querySelector('.game')
         this.canvasElement = this.domElement.querySelector('.js-canvas')
+        this.startupScreen?.setStage('Preparing the 3D engine')
+        this.startupScreen?.setProgress(12)
         document.documentElement.classList.add('is-started')
 
         // First batch for intro
@@ -78,6 +90,8 @@ export class Game
         this.debug = new Debug()
         await this.debug.ready
         this.resourcesLoader = new ResourcesLoader()
+        this.save = new Save()
+        this.haptics = new Haptics()
         this.quality = new Quality()
         this.server = new Server()
         this.ticker = new Ticker()
@@ -87,14 +101,18 @@ export class Game
         this.inputs = new Inputs([], [ 'intro' ])
         this.audio = new Audio()
         this.notifications = new Notifications()
+        this.pwa = window.coukooPwa ?? null
+        this.pwa?.attachGame(this)
         this.rayCursor = new RayCursor()
         this.viewport = new Viewport(this.domElement)
         this.modals = new Modals()
         this.menu = new Menu()
         this.rendering = new Rendering()
         await this.rendering.setRenderer()
+        this.startupScreen?.setStage('Loading the starting area')
+        this.startupScreen?.setProgress(18)
 
-        const compressed = !!import.meta.env.VITE_COMPRESSED
+        const compressed = import.meta.env.VITE_COMPRESSED === '1'
         const compressedModelSuffix = compressed ? '-compressed' : ''
         const compressedTextureFormat = compressed ? 'textureKtx' : 'texture'
         const compressedTextureExtension = compressed ? 'ktx' : 'png'
@@ -106,7 +124,13 @@ export class Game
             [ 'soundTexture',               `intro/sound.${compressedTextureExtension}${cb}`,               compressedTextureFormat, (resource) => { resource.minFilter = THREE.LinearFilter; resource.magFilter = THREE.LinearFilter; resource.generateMipmaps = false; resource.repeat.x = 0.5; } ],
             [ 'paletteTexture',             `palette.${compressedTextureExtension}${cb}`,                   compressedTextureFormat, (resource) => { resource.minFilter = THREE.NearestFilter; resource.magFilter = THREE.NearestFilter; resource.generateMipmaps = false; resource.colorSpace = THREE.SRGBColorSpace; } ],
 
-        ])
+        ], (toLoad, total) =>
+        {
+            this.startupScreen?.setProgress(18 + (1 - toLoad / total) * 12)
+        })
+        this.startupScreen?.setStage('Building the driving world')
+        this.startupScreen?.setProgress(31)
+        this.visualEffects = new VisualEffects()
         this.options = new Options()
         this.respawns = new Respawns(import.meta.env.VITE_PLAYER_SPAWN || 'landing')
         this.view = new View()
@@ -174,11 +198,15 @@ export class Game
             ],
             (toLoad, total) =>
             {
-                this.world.intro.updateProgress(1 - toLoad / total)
+                const progress = 1 - toLoad / total
+                this.world.intro.updateProgress(progress)
+                this.startupScreen?.setProgress(31 + progress * 61)
             }
         )
 
+        this.startupScreen?.setStage('Finalizing physics and controls')
         const [ newResources, RAPIER ] = await Promise.all([ resourcesPromise, rapierPromise ])
+        this.startupScreen?.setProgress(94)
         this.RAPIER = RAPIER
         this.resources = { ...newResources, ...this.resources }
 
@@ -195,8 +223,18 @@ export class Game
         this.tornado = new Tornado()
         this.map = new Map()
         this.title = new Title()
+        this.pause = new Pause()
+        this.missions = new Missions()
+        this.dailyRewards = new DailyRewards()
+        this.garage = new Garage()
+        this.socialShare = new SocialShare()
+        this.controllerStatus = new ControllerStatus()
+        this.tutorial = new Tutorial()
         this.world.step(1)
         this.overlay = new Overlay()
+        this.startupScreen?.setStage('Ready to drive')
+        this.startupScreen?.setProgress(99)
+        this.startupScreen?.hide()
 
         // Pre-render if quality high
         if(this.quality.level === 0 && this.rendering.renderer.backend.isWebGPUBackend)

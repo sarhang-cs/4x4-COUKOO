@@ -1,12 +1,25 @@
 import { Events } from './Events.js'
 import { Game } from './Game.js'
 
+// Legacy migration marker retained for existing project verification and save migrations.
 const STORAGE_KEY = '4x4-coukoo-quality'
 
-const clamp = (value, min, max) => Math.max(min, Math.min(value, max))
+// Legacy binary settings used 0 = High and 1 = Low. Keep those values stable
+// and add 2 = Medium so older saves preserve their original performance choice.
+const QUALITY_LEVELS = Object.freeze({
+    HIGH: 0,
+    LOW: 1,
+    MEDIUM: 2,
+})
+
+const VALID_LEVELS = new Set(Object.values(QUALITY_LEVELS))
+const VALID_SHADOW_MODES = new Set([ 'auto', 'on', 'off' ])
+const VALID_FPS_LIMITS = new Set([ 0, 30, 60 ])
 
 export class Quality
 {
+    static LEVELS = QUALITY_LEVELS
+
     constructor()
     {
         this.game = Game.getInstance()
@@ -18,8 +31,9 @@ export class Quality
         {
             const debugPanel = this.game.debug.panel.addFolder({ title: '⚙️ Quality', expanded: false })
             this.game.debug.addButtons(debugPanel, {
-                low: () => this.changeLevel(1),
-                high: () => this.changeLevel(0),
+                low: () => this.changeLevel(QUALITY_LEVELS.LOW),
+                medium: () => this.changeLevel(QUALITY_LEVELS.MEDIUM),
+                high: () => this.changeLevel(QUALITY_LEVELS.HIGH),
             }, 'change')
         }
     }
@@ -70,6 +84,10 @@ export class Quality
         const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
         const memory = Number(navigator.deviceMemory ?? 4)
         const cores = Number(navigator.hardwareConcurrency ?? 4)
+        const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection
+        const effectiveType = connection?.effectiveType ?? ''
+        const saveData = Boolean(connection?.saveData)
+        const slowConnection = saveData || /(^|-)2g|slow-2g/i.test(effectiveType)
         const gpu = this.getGpuProfile()
         const screenPixels = Math.max(1, (window.screen?.width ?? 1920) * (window.screen?.height ?? 1080))
         const desktop = !isMobile
@@ -81,58 +99,128 @@ export class Quality
             desktop,
             memory,
             cores,
+            connection: { effectiveType, saveData, slowConnection },
             gpu,
             screenPixels,
             tier: ultraDesktop ? 'ultra' : premiumDesktop ? 'high' : 'balanced',
-            isConstrained: isMobile || memory <= 4 || cores <= 4 || gpu.maxTextureSize <= 4096,
+            isConstrained: isMobile || memory <= 4 || cores <= 4 || gpu.maxTextureSize <= 4096 || slowConnection,
         }
     }
 
     getInitialLevel()
     {
-        try
-        {
-            const savedLevel = Number.parseInt(localStorage.getItem(STORAGE_KEY), 10)
-            if(savedLevel === 0 || savedLevel === 1)
-                return savedLevel
-        }
-        catch(error) {}
+        const savedLevel = this.game.save.get('settings.quality', null)
+        if(VALID_LEVELS.has(savedLevel))
+            return savedLevel
 
-        return this.device.isConstrained ? 1 : 0
+        if(this.device.isConstrained)
+            return QUALITY_LEVELS.LOW
+
+        return this.device.isMobile ? QUALITY_LEVELS.MEDIUM : QUALITY_LEVELS.HIGH
+    }
+
+    getLabel(level = this.level)
+    {
+        if(level === QUALITY_LEVELS.LOW)
+            return 'Low'
+        if(level === QUALITY_LEVELS.MEDIUM)
+            return 'Medium'
+        return 'High'
+    }
+
+    getNextLevel()
+    {
+        const order = [ QUALITY_LEVELS.HIGH, QUALITY_LEVELS.MEDIUM, QUALITY_LEVELS.LOW ]
+        const currentIndex = order.indexOf(this.level)
+        return order[(currentIndex + 1) % order.length]
+    }
+
+    getShadowMode()
+    {
+        const saved = this.game.save.get('settings.shadows', 'auto')
+        return VALID_SHADOW_MODES.has(saved) ? saved : 'auto'
+    }
+
+    getShadowsEnabled(level = this.level)
+    {
+        const mode = this.getShadowMode()
+        if(mode === 'on')
+            return true
+        if(mode === 'off')
+            return false
+
+        return Boolean(this.getProfile(level).shadowsEnabled)
+    }
+
+    getFpsLimit()
+    {
+        const saved = Number(this.game.save.get('settings.fpsLimit', 0))
+        return VALID_FPS_LIMITS.has(saved) ? saved : 0
     }
 
     getProfile(level = this.level)
     {
-        const high = level === 0
-        const { isMobile, tier } = this.device
+        const { isMobile, tier, isConstrained } = this.device
 
-        if(!high)
+        if(level === QUALITY_LEVELS.LOW)
         {
             return {
                 level,
                 name: 'Low',
-                pixelRatioLimit: isMobile ? 0.9 : 1.2,
-                pixelRatioFloor: 0.75,
-                renderScaleInitial: 1,
-                renderScaleMin: 0.85,
+                pixelRatioLimit: isMobile ? 0.9 : 1.1,
+                pixelRatioFloor: isMobile ? 0.55 : 0.65,
+                renderScaleInitial: 0.92,
+                renderScaleMin: isMobile ? 0.62 : 0.7,
                 renderScaleMax: 1,
-                maxRenderPixels: isMobile ? 1500000 : 2600000,
-                adaptiveResolution: false,
-                targetFrameTime: isMobile ? 22 : 20,
-                bloomMips: isMobile ? 2 : 3,
-                bloomStrength: 0.18,
-                bloomThreshold: 1.05,
-                bloomSmoothWidth: 0.68,
-                bloomRadius: 0.45,
+                maxRenderPixels: isMobile ? 1000000 : 2200000,
+                adaptiveResolution: true,
+                targetFrameTime: isMobile ? 26 : 23,
+                bloomMips: 1,
+                bloomStrength: 0.08,
+                bloomThreshold: 1.15,
+                bloomSmoothWidth: 0.55,
+                bloomRadius: 0.32,
                 depthOfField: false,
-                dofRepeats: 12,
-                dofAmount: 0.0018,
+                dofRepeats: 8,
+                dofAmount: 0.001,
                 dofStart: 0.24,
                 dofEnd: 0.52,
-                shadowMapSize: isMobile ? 512 : 1024,
-                shadowRadius: 1.65,
-                textureAnisotropy: isMobile ? 2 : 4,
+                shadowMapSize: 512,
+                shadowRadius: 1.2,
+                shadowsEnabled: false,
+                textureAnisotropy: isMobile ? 1 : 2,
                 toneMappingExposure: 1,
+            }
+        }
+
+        if(level === QUALITY_LEVELS.MEDIUM)
+        {
+            return {
+                level,
+                name: 'Medium',
+                pixelRatioLimit: isMobile ? (isConstrained ? 1 : 1.15) : 1.45,
+                pixelRatioFloor: isMobile ? 0.62 : 0.82,
+                renderScaleInitial: 1,
+                renderScaleMin: isMobile ? 0.68 : 0.8,
+                renderScaleMax: isMobile ? 1.05 : 1.2,
+                maxRenderPixels: isMobile ? (isConstrained ? 1500000 : 2100000) : 4300000,
+                adaptiveResolution: true,
+                targetFrameTime: isMobile ? 22 : 19,
+                bloomMips: isMobile ? 2 : 4,
+                bloomStrength: isMobile ? 0.2 : 0.3,
+                bloomThreshold: 0.98,
+                bloomSmoothWidth: 0.76,
+                bloomRadius: 0.52,
+                depthOfField: false,
+                dofRepeats: 18,
+                dofAmount: 0.002,
+                dofStart: 0.21,
+                dofEnd: 0.51,
+                shadowMapSize: isMobile ? 512 : 1024,
+                shadowRadius: isMobile ? 1.8 : 2.6,
+                shadowsEnabled: true,
+                textureAnisotropy: isMobile ? 2 : 6,
+                toneMappingExposure: 1.02,
             }
         }
 
@@ -141,27 +229,28 @@ export class Quality
             return {
                 level,
                 name: 'High',
-                pixelRatioLimit: this.device.isConstrained ? 1.25 : 1.45,
-                pixelRatioFloor: 1,
+                pixelRatioLimit: isConstrained ? 1.05 : 1.3,
+                pixelRatioFloor: isConstrained ? 0.65 : 0.72,
                 renderScaleInitial: 1,
-                renderScaleMin: 0.9,
+                renderScaleMin: isConstrained ? 0.72 : 0.78,
                 renderScaleMax: 1,
-                maxRenderPixels: this.device.isConstrained ? 2200000 : 3000000,
-                adaptiveResolution: false,
-                targetFrameTime: 20,
-                bloomMips: 4,
-                bloomStrength: 0.32,
-                bloomThreshold: 0.9,
-                bloomSmoothWidth: 0.9,
-                bloomRadius: 0.62,
-                depthOfField: true,
-                dofRepeats: 22,
-                dofAmount: 0.0028,
+                maxRenderPixels: isConstrained ? 1800000 : 2600000,
+                adaptiveResolution: true,
+                targetFrameTime: isConstrained ? 23 : 20,
+                bloomMips: isConstrained ? 2 : 3,
+                bloomStrength: 0.28,
+                bloomThreshold: 0.94,
+                bloomSmoothWidth: 0.82,
+                bloomRadius: 0.58,
+                depthOfField: !isConstrained,
+                dofRepeats: isConstrained ? 14 : 20,
+                dofAmount: 0.0025,
                 dofStart: 0.2,
                 dofEnd: 0.5,
-                shadowMapSize: 1024,
-                shadowRadius: 2.4,
-                textureAnisotropy: 4,
+                shadowMapSize: isConstrained ? 512 : 1024,
+                shadowRadius: 2.1,
+                shadowsEnabled: true,
+                textureAnisotropy: isConstrained ? 2 : 4,
                 toneMappingExposure: 1.02,
             }
         }
@@ -191,6 +280,7 @@ export class Quality
                 dofEnd: 0.54,
                 shadowMapSize: 4096,
                 shadowRadius: 4.8,
+                shadowsEnabled: true,
                 textureAnisotropy: 16,
                 toneMappingExposure: 1.16,
             }
@@ -221,6 +311,7 @@ export class Quality
                 dofEnd: 0.53,
                 shadowMapSize: 4096,
                 shadowRadius: 4.1,
+                shadowsEnabled: true,
                 textureAnisotropy: 16,
                 toneMappingExposure: 1.1,
             }
@@ -249,19 +340,54 @@ export class Quality
             dofEnd: 0.52,
             shadowMapSize: 2048,
             shadowRadius: 3.5,
+            shadowsEnabled: true,
             textureAnisotropy: 12,
             toneMappingExposure: 1.06,
         }
     }
 
-    changeLevel(level = 0)
+    changeLevel(level = QUALITY_LEVELS.HIGH)
     {
-        const nextLevel = level === 1 ? 1 : 0
+        const nextLevel = VALID_LEVELS.has(level) ? level : QUALITY_LEVELS.HIGH
         if(nextLevel === this.level)
             return
 
         this.level = nextLevel
-        try { localStorage.setItem(STORAGE_KEY, String(this.level)) } catch(error) {}
+        this.game.save.set('settings.quality', this.level, { immediate: true })
         this.events.trigger('change', [ this.level, this.getProfile() ])
+    }
+
+    setShadowMode(mode = 'auto')
+    {
+        const nextMode = VALID_SHADOW_MODES.has(mode) ? mode : 'auto'
+        if(nextMode === this.getShadowMode())
+            return
+
+        this.game.save.set('settings.shadows', nextMode, { immediate: true })
+        this.events.trigger('settingsChange', [ 'shadows', nextMode ])
+    }
+
+    cycleShadowMode()
+    {
+        const order = [ 'auto', 'on', 'off' ]
+        const currentIndex = order.indexOf(this.getShadowMode())
+        this.setShadowMode(order[(currentIndex + 1) % order.length])
+    }
+
+    setFpsLimit(limit = 0)
+    {
+        const nextLimit = VALID_FPS_LIMITS.has(Number(limit)) ? Number(limit) : 0
+        if(nextLimit === this.getFpsLimit())
+            return
+
+        this.game.save.set('settings.fpsLimit', nextLimit, { immediate: true })
+        this.events.trigger('settingsChange', [ 'fpsLimit', nextLimit ])
+    }
+
+    cycleFpsLimit()
+    {
+        const order = [ 0, 60, 30 ]
+        const currentIndex = order.indexOf(this.getFpsLimit())
+        this.setFpsLimit(order[(currentIndex + 1) % order.length])
     }
 }

@@ -60,18 +60,12 @@ export class Achievements
                 }
             })
 
-            const encodedData = JSON.stringify(data)
-            localStorage.setItem('achievements', encodedData)
+            this.game.save.set('progress.achievements', data)
         }
 
         this.storage.get = () =>
         {
-            const localAchievements = localStorage.getItem('achievements')
-
-            if(localAchievements)
-                return JSON.parse(localAchievements)
-
-            return {}
+            return this.game.save.get('progress.achievements', {})
         }
     }
 
@@ -92,23 +86,13 @@ export class Achievements
         this.globalProgress.timeStart = 0
         this.globalProgress.timeEnd = 0
 
-        let localTimeStart = localStorage.getItem('achievementsTimeStart')
-        if(localTimeStart)
-        {
-            localTimeStart = parseFloat(localTimeStart)
+        const savedTimeStart = this.game.save.get('progress.achievementsTimeStart', 0)
+        if(Number.isFinite(savedTimeStart))
+            this.globalProgress.timeStart = savedTimeStart
 
-            if(!isNaN(localTimeStart))
-                this.globalProgress.timeStart = localTimeStart
-        }
-
-        let localTimeEnd = localStorage.getItem('achievementsTimeEnd')
-        if(localTimeEnd)
-        {
-            localTimeEnd = parseFloat(localTimeEnd)
-
-            if(!isNaN(localTimeEnd))
-                this.globalProgress.timeEnd = localTimeEnd
-        }
+        const savedTimeEnd = this.game.save.get('progress.achievementsTimeEnd', 0)
+        if(Number.isFinite(savedTimeEnd))
+            this.globalProgress.timeEnd = savedTimeEnd
 
         this.globalProgress.update = () =>
         {
@@ -134,10 +118,10 @@ export class Achievements
                 if(!this.globalProgress.achieved)
                 {
                     // Not already ended
-                    if(!localStorage.getItem('achievementsTimeEnd'))
+                    if(!this.game.save.get('progress.achievementsTimeEnd', 0))
                     {
                         this.globalProgress.timeEnd = this.game.player.timePlayed.all
-                        localStorage.setItem('achievementsTimeEnd', this.globalProgress.timeEnd)
+                        this.game.save.set('progress.achievementsTimeEnd', this.globalProgress.timeEnd, { immediate: true })
                     }
 
                     this.globalProgress.timeElement.textContent = timeToReadableString(this.globalProgress.timeEnd - this.globalProgress.timeStart)
@@ -157,8 +141,8 @@ export class Achievements
 
             this.globalProgress.timeStart = this.game.player.timePlayed.all
             this.globalProgress.timeEnd = 0
-            localStorage.setItem('achievementsTimeStart', this.globalProgress.timeStart)
-            localStorage.removeItem('achievementsTimeEnd')
+            this.game.save.set('progress.achievementsTimeStart', this.globalProgress.timeStart, { immediate: true })
+            this.game.save.set('progress.achievementsTimeEnd', 0, { immediate: true })
             
             this.globalProgress.element.classList.remove('is-achieved')
         }
@@ -208,7 +192,7 @@ export class Achievements
         // Current
         this.rewards.current = this.rewards.default
 
-        const localRewardName = localStorage.getItem('achievementsReward')
+        const localRewardName = this.game.save.get('progress.achievementReward', null)
         if(localRewardName)
         {
             const item = this.rewards.items.get(localRewardName)
@@ -239,7 +223,7 @@ export class Achievements
                 this.events.trigger('rewardActiveChange', [ this.rewards.current ])
 
                 // Save
-                localStorage.setItem('achievementsReward', item.name)
+                this.game.save.set('progress.achievementReward', item.name, { immediate: true })
 
                 return true
             }

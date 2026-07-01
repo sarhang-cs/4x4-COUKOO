@@ -1,0 +1,38 @@
+export const missions = [
+    {
+        id: 'firstTracks',
+        title: 'First tracks',
+        description: 'Drive 250 m anywhere in the world.',
+        type: 'distance',
+        target: 250,
+        unit: 'm',
+        reward: 50,
+    },
+    {
+        id: 'boostControl',
+        title: 'Boost control',
+        description: 'Boost while moving for 10 seconds in total.',
+        type: 'boost',
+        target: 10,
+        unit: 's',
+        reward: 70,
+    },
+    {
+        id: 'speedTrial',
+        title: 'Speed trial',
+        description: 'Reach 55 km/h on an open path.',
+        type: 'speed',
+        target: 55,
+        unit: 'km/h',
+        reward: 80,
+    },
+    {
+        id: 'trailRunner',
+        title: 'Trail runner',
+        description: 'Drive 1 km in total on your current save.',
+        type: 'distance',
+        target: 1000,
+        unit: 'm',
+        reward: 110,
+    },
+]

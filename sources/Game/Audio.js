@@ -12,15 +12,35 @@ export class Audio
         this.game = Game.getInstance()
 
         this.initiated = false
+        this.paused = false
         this.groups = new Map()
         this.events = new Events()
 
+        this.setVolume()
         this.setMute()
 
         this.game.ticker.events.on('tick', () =>
         {
             this.update()
         }, 14)
+    }
+
+    pause()
+    {
+        if(this.paused || !this.initiated)
+            return
+
+        this.paused = true
+        Howler.ctx?.suspend?.().catch(() => {})
+    }
+
+    resume()
+    {
+        if(!this.paused || !this.initiated)
+            return
+
+        this.paused = false
+        Howler.ctx?.resume?.().catch(() => {})
     }
 
     init()
@@ -655,6 +675,29 @@ export class Audio
         }
     }
 
+    setVolume()
+    {
+        this.volume = {}
+        this.volume.value = Math.max(0, Math.min(1, Number(this.game.save.get('settings.audioVolume', 0.8))))
+
+        this.volume.set = (value, { save = true } = {}) =>
+        {
+            const nextValue = Math.max(0, Math.min(1, Number(value)))
+            if(!Number.isFinite(nextValue))
+                return
+
+            this.volume.value = nextValue
+            Howler.volume(nextValue)
+
+            if(save)
+                this.game.save.set('settings.audioVolume', nextValue, { immediate: true })
+
+            this.events.trigger('volumeChange', [ nextValue ])
+        }
+
+        this.volume.set(this.volume.value, { save: false })
+    }
+
     setMute()
     {
         this.mute = {}
@@ -676,7 +719,7 @@ export class Audio
             
             Howler.mute(true)
             this.mute.active = true
-            localStorage.setItem('soundToggle', '1')
+            this.game.save.set('settings.audioMuted', true, { immediate: true })
             document.documentElement.classList.add('is-audio-muted')
             this.events.trigger('muteChange', [ true ])
         }
@@ -688,14 +731,14 @@ export class Audio
             
             Howler.mute(false)
             this.mute.active = false
-            localStorage.setItem('soundToggle', '0')
+            this.game.save.set('settings.audioMuted', false, { immediate: true })
             document.documentElement.classList.remove('is-audio-muted')
             this.events.trigger('muteChange', [ false ])
         }
 
         // From local storage
-        const soundToggleLocal = localStorage.getItem('soundToggle')
-        if(soundToggleLocal !== null && soundToggleLocal === '1')
+        const audioMuted = this.game.save.get('settings.audioMuted', false)
+        if(audioMuted)
             this.mute.activate()
 
         // Inputs keyboard

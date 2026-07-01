@@ -7,11 +7,16 @@
         align-items center
 
     table
+        width min(100%, 410px)
         border-spacing 0 10px
 
         td:first-child
-            padding-right 40px
-        
+            width 42%
+            padding-right 22px
+
+        td:last-child
+            width 58%
+
     .audio-toggle
         img
             width 29px
@@ -19,7 +24,7 @@
 
             &.audio-off
                 display none
-                
+
             &.audio-on
                 display block
 
@@ -36,3 +41,33 @@
         align-items center
         justify-content center
         width 100%
+        min-height 34px
+
+    .save-status
+        min-width 118px
+
+    .volume-control
+        display grid
+        grid-template-columns minmax(110px, 1fr) 44px
+        gap 10px
+        align-items center
+
+        input[type="range"]
+            width 100%
+            accent-color #f29c38
+            cursor pointer
+
+        .volume-value
+            font-size 12px
+            font-weight 700
+            text-align right
+            white-space nowrap
+
+    @media (max-width: 480px)
+        table
+            td:first-child
+                padding-right 14px
+
+        .volume-control
+            grid-template-columns minmax(86px, 1fr) 38px
+            gap 7px

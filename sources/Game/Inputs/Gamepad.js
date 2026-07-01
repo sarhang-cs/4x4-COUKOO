@@ -6,11 +6,72 @@ export class Gamepad
     constructor()
     {
         this.events = new Events()
-        
+        this.connected = false
+        this.deviceId = ''
+
         this.setMappings()
         this.setType()
         this.setButtons()
         this.setJoysticks()
+        this.setConnectionEvents()
+    }
+
+    setConnectionEvents()
+    {
+        globalThis.addEventListener?.('gamepadconnected', () =>
+        {
+            this.updateConnection(this.getActiveGamepad())
+        })
+
+        globalThis.addEventListener?.('gamepaddisconnected', () =>
+        {
+            this.updateConnection(this.getActiveGamepad())
+        })
+    }
+
+    getActiveGamepad()
+    {
+        const gamepads = globalThis.navigator?.getGamepads?.() ?? []
+        let active = null
+
+        for(const gamepad of gamepads)
+        {
+            if(gamepad && gamepad.connected !== false)
+                active = gamepad
+        }
+
+        return active
+    }
+
+    updateConnection(gamepad)
+    {
+        const connected = Boolean(gamepad)
+        const id = gamepad?.id ?? ''
+        if(connected === this.connected && id === this.deviceId)
+            return
+
+        const wasConnected = this.connected
+        this.connected = connected
+        this.deviceId = id
+
+        if(!connected)
+        {
+            for(const button of Object.values(this.buttons))
+            {
+                if(button.pressed)
+                {
+                    button.pressed = false
+                    button.value = 0
+                    this.events.trigger('up', [ button ])
+                }
+            }
+
+            for(const joystick of Object.values(this.joysticks))
+                Object.assign(joystick, { x: 0, y: 0, safeX: 0, safeY: 0, radius: 0, safeRadius: 0, active: false })
+        }
+
+        if(connected || wasConnected)
+            this.events.trigger('connection', [ { connected, id, type: this.type } ])
     }
 
     /**
@@ -240,15 +301,11 @@ export class Gamepad
 
     update()
     {
-        // Get the last non-null gamepad from navigator.getGamepads
-        let gamepad = null
-        for(const _gamepad of navigator.getGamepads())
-        {
-            if(_gamepad !== null)
-                gamepad = _gamepad
-        }
+        const gamepad = this.getActiveGamepad()
+        this.updateConnection(gamepad)
 
-        // Didn't find gamepad
+        // No controller is connected. updateConnection() also releases any
+        // action that could otherwise remain stuck after an unplug event.
         if(gamepad === null)
             return
 
@@ -311,6 +368,7 @@ export class Gamepad
             document.documentElement.classList.remove(`is-gamepad-${oldType}`)
             document.documentElement.classList.add(`is-gamepad-${this.type}`)
             this.events.trigger('typeChange', [ this.type ])
+            this.events.trigger('connection', [ { connected: true, id: this.deviceId, type: this.type } ])
         }
     }
 }

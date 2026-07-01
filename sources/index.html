@@ -2,42 +2,84 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#11151f">
+    <meta name="color-scheme" content="dark">
+    <meta name="application-name" content="4X4 COUKOO">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>4X4 COUKOO — Sarhang Salah · SARHANG IO</title>
 
-    <meta name="description" content="4X4 COUKOO — an interactive 3D driving world by Sarhang Salah, developed under SARHANG IO.">
+    <meta name="description" content="4X4 COUKOO — a mobile-ready interactive 3D driving world by Sarhang Salah under SARHANG IO.">
+    <meta name="robots" content="index,follow">
+    <link rel="canonical" href="__COUKOO_CANONICAL_URL__">
 
     <meta itemprop="name" content="4X4 COUKOO">
-    <meta itemprop="description" content="4X4 COUKOO — an interactive 3D driving world by Sarhang Salah, developed under SARHANG IO.">
-    <meta itemprop="image" content="/social/share-image.jpg?cb=a">
+    <meta itemprop="description" content="Drive, explore and discover a stylized 3D world built for mobile, tablet and desktop.">
+    <meta itemprop="image" content="__COUKOO_SHARE_IMAGE_URL__">
 
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="4X4 COUKOO">
-    <meta name="twitter:description" content="4X4 COUKOO — an interactive 3D driving world by Sarhang Salah, developed under SARHANG IO.">
-    <meta name="twitter:image" content="/social/share-image.jpg?cb=a">
+    <meta name="twitter:title" content="4X4 COUKOO — Interactive 3D Driving World">
+    <meta name="twitter:description" content="Drive, explore and discover a stylized 3D world by SARHANG IO.">
+    <meta name="twitter:image" content="__COUKOO_SHARE_IMAGE_URL__">
 
     <meta property="og:site_name" content="4X4 COUKOO">
     <meta property="og:type" content="website">
-    <meta property="og:url" content="/">
-    <meta property="og:title" content="4X4 COUKOO">
-    <meta property="og:description" content="4X4 COUKOO — an interactive 3D driving world by Sarhang Salah, developed under SARHANG IO.">
-    <meta property="og:image" content="/social/share-image.jpg?cb=a">
+    <meta property="og:url" content="__COUKOO_CANONICAL_URL__">
+    <meta property="og:title" content="4X4 COUKOO — Interactive 3D Driving World">
+    <meta property="og:description" content="Drive, explore and discover a stylized 3D world by SARHANG IO.">
+    <meta property="og:image" content="__COUKOO_SHARE_IMAGE_URL__">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="4X4 COUKOO interactive driving world">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Amatic+SC:wght@700&family=Nunito:wght@400;700;900&display=block" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Amatic+SC:wght@700&family=Nunito:wght@400;700;900&display=swap" rel="stylesheet">
     
     <link rel="stylesheet" href="./style/index.styl">
 
-    <link rel="icon" type="image/png" href="/favicons/favicon-96x96.png" sizes="96x96" />
-    <link rel="icon" type="image/svg+xml" href="/favicons/favicon.svg" loading="lazy" />
-    <link rel="shortcut icon" href="/favicons/favicon.ico" />
-    <link rel="apple-touch-icon" sizes="180x180" href="/favicons/apple-touch-icon.png" />
-    <meta name="apple-mobile-web-app-title" content="4X4 COUKOO" />
-    <link rel="manifest" href="/favicons/site.webmanifest" />
+    <link rel="icon" type="image/png" href="./favicons/favicon-96x96.png" sizes="96x96">
+    <link rel="icon" type="image/svg+xml" href="./favicons/favicon.svg">
+    <link rel="shortcut icon" href="./favicons/favicon.ico">
+    <link rel="apple-touch-icon" sizes="180x180" href="./favicons/apple-touch-icon.png">
+    <meta name="apple-mobile-web-app-title" content="4X4 COUKOO">
+    <link rel="manifest" href="./manifest.webmanifest">
     
 </head>
 <body>
+
+    <!-- Startup screen: stays visible until the 3D renderer and world are ready. -->
+    <section class="js-startup-screen startup-screen" aria-live="polite" aria-busy="true">
+        <div class="startup-card">
+            <div class="js-startup-loading">
+                <div class="startup-brand" aria-label="SARHANG IO">
+                    <span class="startup-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+                    <span class="startup-brand-copy">
+                        <span class="startup-eyebrow">SARHANG IO</span>
+                        <span class="startup-brand-name">INTERACTIVE WORLD</span>
+                    </span>
+                </div>
+                <p class="startup-kicker">Preparing the drive</p>
+                <h1 class="startup-title">4X4 COUKOO</h1>
+                <p class="startup-copy">Loading the vehicle, terrain and 3D world for your device.</p>
+                <div class="startup-progress-row">
+                    <span class="js-startup-status startup-status">Checking your device</span>
+                    <span class="js-startup-progress-value startup-progress-value">0%</span>
+                </div>
+                <div class="js-startup-progress startup-progress" role="progressbar" aria-label="Game loading progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></div>
+                <p class="js-startup-hint startup-hint">The first launch can take longer while the browser prepares 3D files.</p>
+            </div>
+
+            <div class="js-startup-error" hidden>
+                <div class="startup-error-icon" aria-hidden="true">!</div>
+                <h1 class="js-startup-error-title startup-error-title">4X4 COUKOO could not start</h1>
+                <p class="js-startup-error-description startup-error-description"></p>
+                <button type="button" class="js-startup-retry startup-retry">Reload game</button>
+                <p class="js-startup-error-code startup-error-code"></p>
+            </div>
+        </div>
+    </section>
 
     <div class="js-fonts-loader fonts-loader">
         <div class="font nunito" data-font="400 20px Nunito"> </div>
@@ -48,6 +90,52 @@
     <div class="game">
 
         <canvas class="js-canvas"></canvas>
+
+        <!-- Lightweight screen-space atmosphere: controlled from Options. -->
+        <div class="js-drive-vfx drive-vfx" aria-hidden="true" hidden>
+            <div class="drive-vfx__grade"></div>
+            <div class="drive-vfx__rain"></div>
+            <div class="drive-vfx__snow"></div>
+            <div class="drive-vfx__speed"></div>
+            <div class="drive-vfx__dust"></div>
+            <div class="drive-vfx__storm"></div>
+        </div>
+
+
+        <!-- Guided first-drive tutorial -->
+        <section class="js-tutorial tutorial" aria-label="Driving tutorial" aria-hidden="true" hidden>
+            <div class="tutorial-card" role="dialog" aria-modal="true" aria-labelledby="tutorial-title">
+                <div class="tutorial-topline">
+                    <span class="js-tutorial-eyebrow tutorial-eyebrow">Step 1 of 4</span>
+                    <span class="tutorial-brand">4X4 COUKOO</span>
+                </div>
+                <div class="js-tutorial-progress tutorial-progress" aria-hidden="true"></div>
+                <h2 id="tutorial-title" class="js-tutorial-title tutorial-title">Take control of the 4X4</h2>
+                <p class="js-tutorial-copy tutorial-copy"></p>
+                <p class="js-tutorial-input tutorial-input"></p>
+                <div class="tutorial-actions">
+                    <button type="button" class="js-tutorial-skip tutorial-link">Skip tutorial</button>
+                    <button type="button" class="js-tutorial-next button tutorial-next">Next</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Real pause menu: stops the simulation while the menu is open -->
+        <section class="js-pause pause" aria-label="Paused game" aria-hidden="true" hidden>
+            <div class="pause-card" role="dialog" aria-modal="true" aria-labelledby="pause-title">
+                <p class="pause-kicker">DRIVE PAUSED</p>
+                <h2 id="pause-title" class="pause-title">4X4 COUKOO</h2>
+                <p class="pause-copy">Your drive is safe. Choose where to go next.</p>
+                <div class="pause-actions">
+                    <button type="button" class="js-pause-resume button pause-primary">Resume drive</button>
+                    <button type="button" class="js-pause-map button">Open map</button>
+                    <button type="button" class="js-pause-options button">Settings</button>
+                    <button type="button" class="js-pause-restart button">Reset world</button>
+                    <button type="button" class="js-pause-quit pause-link">Quick menu</button>
+                </div>
+                <p class="pause-hint">Press <strong>P</strong> or <strong>Start</strong> to resume.</p>
+            </div>
+        </section>
 
         <!-- Touch buttons -->
         <div class="js-touch-buttons touch-buttons">
@@ -60,6 +148,17 @@
                 <button data-name="open" class="js-button open"></button>
                 <button data-name="close" class="js-button close"></button>
             </div>
+        </div>
+
+        <!-- Persisted mission currency -->
+        <div class="coukoo-coins js-coukoo-coins" aria-label="Mission coins">
+            <span class="coukoo-coins__mark" aria-hidden="true">C</span>
+            <span class="js-coukoo-coins-value">0</span>
+        </div>
+
+        <div class="controller-status js-controller-status" aria-live="polite" hidden>
+            <span aria-hidden="true">🎮</span>
+            <span class="js-controller-status-label">Controller</span>
         </div>
 
         <!-- Menu trigger -->
@@ -136,6 +235,15 @@
                         </div>
                     </button>
 
+                    <!-- Garage & missions -->
+                    <button class="js-navigation-item item" data-name="garage" aria-label="Garage and missions">
+                        <div class="button-inner">
+                            <div class="icon-container">
+                                <img src="ui/wheel.svg" loading="lazy" alt="">
+                            </div>
+                        </div>
+                    </button>
+
                     <!-- Circuit -->
                     <button class="js-navigation-item item" data-name="circuit">
                         <div class="button-inner">
@@ -188,6 +296,17 @@
                             <img class="background" src="ui/previews/achievements.webp" loading="lazy" draggable="false">
                         </div>
 
+                        <!-- Garage -->
+                        <div class="js-preview preview garage-preview" aria-hidden="true">
+                            <div class="garage-preview__grid"></div>
+                            <div class="garage-preview__vehicle">
+                                <span class="garage-preview__wheel garage-preview__wheel--front"></span>
+                                <span class="garage-preview__wheel garage-preview__wheel--rear"></span>
+                                <span class="garage-preview__body"></span>
+                            </div>
+                            <div class="garage-preview__label">COUKOO GARAGE</div>
+                        </div>
+
                         <!-- Circuit -->
                         <div class="js-preview preview circuit-preview">
                             <img class="background" src="ui/previews/circuit.webp" loading="lazy" draggable="false">
@@ -226,24 +345,101 @@
                                     <tbody>
                                         <tr>
                                             <td>
-                                                Audio 
+                                                Audio
                                             </td>
                                             <td>
-                                                <button class="js-audio-toggle audio-toggle button is-small has-tooltip">
+                                                <button class="js-audio-toggle audio-toggle button is-small has-tooltip" type="button" aria-label="Mute sound" aria-pressed="false">
                                                     <div class="tooltip">Toggles sound</div>
-                                                    <img class="icon icon-audio audio-on" src="ui/audio/audioOn.svg" loading="lazy">
-                                                    <img class="icon icon-audio audio-off" src="ui/audio/audioOff.svg" loading="lazy">
+                                                    <img class="icon icon-audio audio-on" src="ui/audio/audioOn.svg" loading="lazy" alt="">
+                                                    <img class="icon icon-audio audio-off" src="ui/audio/audioOff.svg" loading="lazy" alt="">
                                                 </button>
                                             </td>
                                         </tr>
                                         <tr>
                                             <td>
-                                                Quality 
+                                                Volume
                                             </td>
                                             <td>
-                                                <button class="js-quality-toggle quality-toggle button is-small has-tooltip">
-                                                    <div class="tooltip">Toggles some effects</div>
-                                                    <span>Low</span>
+                                                <div class="volume-control">
+                                                    <input class="js-audio-volume" type="range" min="0" max="100" step="1" value="80" aria-label="Master volume">
+                                                    <span class="js-audio-volume-value volume-value">80%</span>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>
+                                                Graphics
+                                            </td>
+                                            <td>
+                                                <button class="js-quality-toggle quality-toggle button is-small has-tooltip" type="button">
+                                                    <div class="tooltip">Cycles High, Medium, and Low graphics presets</div>
+                                                    <span>High</span>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>
+                                                Frame rate
+                                            </td>
+                                            <td>
+                                                <button class="js-fps-toggle button is-small has-tooltip" type="button">
+                                                    <div class="tooltip">Cycles Auto, 60 FPS, and 30 FPS</div>
+                                                    <span>Auto</span>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>
+                                                Shadows
+                                            </td>
+                                            <td>
+                                                <button class="js-shadows-toggle button is-small has-tooltip" type="button">
+                                                    <div class="tooltip">Cycles automatic, on, and off shadows</div>
+                                                    <span>Auto</span>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>
+                                                Visual effects
+                                            </td>
+                                            <td>
+                                                <button class="js-visual-effects-toggle button is-small has-tooltip" type="button">
+                                                    <div class="tooltip">Cinematic rain, snow, night color and speed effects</div>
+                                                    <span>Auto</span>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>
+                                                Vibration
+                                            </td>
+                                            <td>
+                                                <button class="js-vibration-toggle button is-small has-tooltip" type="button" aria-pressed="true">
+                                                    <div class="tooltip">Vibrates on stronger vehicle impacts</div>
+                                                    <span>On</span>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>
+                                                Display
+                                            </td>
+                                            <td>
+                                                <button class="js-fullscreen-toggle button is-small has-tooltip" type="button">
+                                                    <div class="tooltip">Use more of your screen</div>
+                                                    <span>Full screen</span>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>
+                                                Performance
+                                            </td>
+                                            <td>
+                                                <button class="js-performance-status button is-small is-disabled has-tooltip" type="button">
+                                                    <div class="tooltip">Live renderer and graphics preset information</div>
+                                                    <span>Checking</span>
                                                 </button>
                                             </td>
                                         </tr>
@@ -288,6 +484,61 @@
                                                 <button class="js-server button is-small is-disabled has-tooltip">
                                                     <div class="js-tooltip tooltip"></div>
                                                     <span>Pending</span>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>
+                                                Install app
+                                            </td>
+                                            <td>
+                                                <button class="js-install-app button is-small has-tooltip" type="button">
+                                                    <div class="js-install-app-tooltip tooltip">Install 4X4 COUKOO for a full-screen app experience.</div>
+                                                    <span>Checking</span>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>
+                                                Offline play
+                                            </td>
+                                            <td>
+                                                <button class="js-offline-status button is-small is-disabled has-tooltip" type="button">
+                                                    <div class="js-offline-tooltip tooltip">Checking offline support</div>
+                                                    <span>Checking</span>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>
+                                                Save status
+                                            </td>
+                                            <td>
+                                                <button class="js-save-status save-status button is-small is-disabled has-tooltip">
+                                                    <div class="js-save-tooltip tooltip">Your settings and progress are saved on this device.</div>
+                                                    <span>Saved</span>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>
+                                                Backup
+                                            </td>
+                                            <td>
+                                                <button class="js-save-export button is-small has-tooltip">
+                                                    <div class="tooltip">Downloads a backup of your game data</div>
+                                                    Export save
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>
+                                                Progress
+                                            </td>
+                                            <td>
+                                                <button class="js-save-clear button is-small is-danger has-tooltip">
+                                                    <div class="tooltip">Clears progress but keeps your settings</div>
+                                                    Clear progress
                                                 </button>
                                             </td>
                                         </tr>
@@ -353,6 +604,10 @@
                                                         <tr>
                                                             <td><span class="key">M</span></td>
                                                             <td>Map</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td><span class="key">P</span></td>
+                                                            <td>Pause game</td>
                                                         </tr>
                                                         <tr>
                                                             <td><span class="key">L</span></td>
@@ -490,6 +745,9 @@
                                         </div>
                                     </div>
                                 </div>
+                                <div class="tutorial-replay-row">
+                                    <button class="js-tutorial-open button tutorial-replay" type="button">Replay driving tutorial</button>
+                                </div>
                             </div>
                         </div>
 
@@ -556,6 +814,49 @@
                                         Reset achievements
                                     </button>
                                     
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Garage & missions -->
+                        <div class="js-content content garage-content">
+                            <div class="content-inner">
+                                <div class="garage-header">
+                                    <div>
+                                        <div class="title">Garage</div>
+                                        <p class="text text-faded">Complete driving missions, earn coins, and unlock another 4X4 body.</p>
+                                    </div>
+                                    <div class="garage-balance" aria-live="polite">
+                                        <span class="garage-balance__mark">C</span>
+                                        <span class="js-garage-coins">0 coins</span>
+                                    </div>
+                                </div>
+
+                                <div class="garage-section garage-daily-section">
+                                    <h2 class="garage-section__title">Daily reward</h2>
+                                    <div class="js-daily-reward daily-reward">
+                                        <div class="daily-reward__top">
+                                            <div>
+                                                <strong class="daily-reward__title">Drive streak</strong>
+                                                <p class="js-daily-status daily-reward__status">Checking today’s reward…</p>
+                                            </div>
+                                            <span class="js-daily-amount daily-reward__amount">+25 coins</span>
+                                        </div>
+                                        <div class="daily-reward__bottom">
+                                            <span class="js-daily-streak daily-reward__streak">1 / 7 days</span>
+                                            <button type="button" class="js-daily-claim daily-reward__button button is-small">Collect reward</button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="garage-section">
+                                    <h2 class="garage-section__title">Driving missions</h2>
+                                    <div class="js-mission-list mission-list"></div>
+                                </div>
+
+                                <div class="garage-section">
+                                    <h2 class="garage-section__title">Vehicle collection</h2>
+                                    <div class="js-garage-list garage-list"></div>
                                 </div>
                             </div>
                         </div>
@@ -744,6 +1045,8 @@
                             <img src="ui/warning.svg" loading="lazy" alt="" class="icon"> Server currently offline. Scores can't be saved.
                         </p>
 
+                        <p class="js-circuit-personal-best circuit-personal-best text" aria-live="polite"></p>
+
                         <p class="not-top-10 text">
                             Sorry, you didn't make it to the top 10.
                         </p>
@@ -786,6 +1089,10 @@
                             <div class="or">
                                 or
                             </div>
+
+                            <button type="button" class="js-button-share button button-share">
+                                Share result
+                            </button>
 
                             <button class="js-button-restart button">
                                 <svg class="icon icon-restart" width="20" height="24" viewBox="0 0 20 24" fill="none" xmlns="http://www.w3.org/2000/svg">

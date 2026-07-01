@@ -104,6 +104,7 @@ export class PhysicsVehicle
             onCollision: (force, position) =>
             {
                 this.game.audio.groups.get('hitDefault').playRandomNext(force, position)
+                this.game.haptics?.impact(force)
             }
         })
         this.chassis.physical = object.physical

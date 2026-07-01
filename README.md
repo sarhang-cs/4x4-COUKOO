@@ -4,16 +4,17 @@
 
 # 4X4 COUKOO
 
-## v1.7.0 — Final Release Cleanup & QA
+## Phase 9 — Daily Rewards, Sharing & Controller Reliability
 
-- High now uses a desktop-only adaptive render-resolution governor that reacts to real frame time.
-- Premium desktop hardware receives a higher internal render scale, 4K shadows, denser depth-of-field and richer bloom; mobile remains on the existing balanced path.
-- No gameplay assets, audio, UI, vehicle physics, or effects were removed.
+- Added a save-backed seven-day daily reward streak in the Garage.
+- Added Circuit personal-best / daily-best tracking and offline result sharing.
+- Improved controller lifecycle support: connected status and safe action release on disconnect.
+- Documented the optional trusted backend needed for official live leaderboard submissions.
 
 
 ### Interactive 3D Driving World
 
-**Developer: Sarhang Salah · SARHANG IO · 2026 · v1.7.0**
+**Developer: Sarhang Salah · SARHANG IO · 2026 · v1.11.0**
 
 <img src="./static/readme/4x4-coukoo-cover.png" alt="4X4 COUKOO cover artwork" width="100%" />
 
@@ -44,6 +45,36 @@ The game is designed for mobile, tablet, and desktop browsers. It uses WebGPU wh
 | --- | --- |
 | <img src="./static/readme/4x4-coukoo-cover.png" alt="4X4 COUKOO world screenshot" width="100%" /> | <img src="./static/readme/4x4-coukoo-ui.png" alt="4X4 COUKOO menu and interface screenshot" width="100%" /> |
 
+
+
+## Phase 9 — Daily Rewards, Sharing & Controller Reliability
+
+- Added a seven-day daily reward streak, saved on the device and available in the Garage.
+- Added saved Circuit personal-best / daily-best tracking and an offline result modal.
+- Added native Web Share with safe clipboard fallback for Circuit results.
+- Added controller connection-status UX and safe release of held inputs when a controller disconnects.
+- The static site client supports an optional live leaderboard WebSocket. The trusted server contract is documented in [`LEADERBOARD-SERVER.md`](./LEADERBOARD-SERVER.md).
+
+## Phase 7 Visual Polish & Dynamic Atmosphere
+
+- Added screen-space visual polish for rain, snow, dusk/night tint, dust, lightning atmosphere, and boost-speed motion.
+- Added an Auto / On / Off Visual Effects setting that persists through the existing versioned device save.
+- Auto enables the effects on Medium and High, while Low prioritizes frame pacing by keeping the optional overlay stack disabled.
+- Added automated Phase 7 regression coverage.
+
+## v1.8.5 Guided Startup & Recovery
+
+- Added a polished branded loading screen with accessible progress, staged status text, and a mobile-data hint.
+- Added a WebGL preflight before the runtime begins, so unsupported devices receive a clear explanation instead of a blank page.
+- Startup now waits for the game initialization promise, classifies resource-load failures, and provides a one-tap reload action.
+- Added an automated Phase 3 test for the loading shell, safe text rendering, device checks, and error recovery wiring.
+
+## v1.8.0 Mobile Performance & Delivery Optimization
+
+- Production builds use compressed KTX2 textures and Draco GLB models where the validated scene permits them.
+- The deployment output removes duplicate uncompressed asset variants, legacy font formats, and source-only readme files.
+- Mobile and Low profiles include adaptive resolution, balanced render budgets, and safer texture/shadow limits.
+- Large resource batches use a device-aware loading queue; the renderer pauses while the page is hidden.
 
 ## v1.7.0 Release Cleanup & QA
 
@@ -131,6 +162,18 @@ npm run build
 npm run preview
 ```
 
+## PWA and Production Launch
+
+The production build is installable as a Progressive Web App. In the game, open **Options → Install app** to install it on supported browsers, or use **Share → Add to Home Screen** on iPhone and iPad.
+
+For absolute canonical and social-preview URLs, set this before the final build:
+
+```bash
+VITE_SITE_URL=https://your-public-domain.example
+```
+
+When it is blank, the build uses portable relative paths and remains compatible with GitHub Pages repository URLs. See `DEPLOYMENT-CHECKLIST.md` for the final hosting checklist.
+
 ## Deploy on Vercel
 
 Use these values when importing the repository:
@@ -140,7 +183,7 @@ Framework Preset: Vite
 Install Command: npm install --no-audit --no-fund
 Build Command: npm run build
 Output Directory: dist
-Node.js Version: 24.x
+Node.js Version: 22.12+ (Node 24 is also supported)
 ```
 
 ## Project Structure
@@ -319,3 +362,11 @@ The production build uses real code splitting rather than suppressing Vite's bun
 - Motion, camera, audio, input, text and random utilities use stable vendor chunks.
 
 `chunkSizeWarningLimit` is set to 1500 kB only after this split, matching the required Three.js WebGPU engine chunk. The build will warn again if a chunk grows beyond that intentional engine budget.
+
+## Phase 5 settings
+The Options panel now includes persistent High / Medium / Low graphics presets, master volume, Auto/60/30 FPS selection, shadow mode, vibration, and full-screen display controls. Run `npm test` to include all Phase 1–5 checks.
+
+## Phase 6 — UX, Tutorial, and Pause
+- A first-drive tutorial appears once after the opening reveal, with touch, keyboard, and gamepad guidance.
+- The Controls panel includes a replay-tutorial action.
+- Press `P` or gamepad `Start` for a real Pause menu; it freezes game-time and audio safely.

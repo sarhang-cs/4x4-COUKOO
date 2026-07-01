@@ -1,24 +1,27 @@
-# 4X4 COUKOO v1.7.0 — Final Release Cleanup & QA
+# 4X4 COUKOO — Phase 10 Release Notes
 
-## Scope
+Phase 10 makes the static production build installable and safer to publish.
 
-This update is a release-cleanup pass. It does not remove gameplay content, UI, physics, sound effects, world effects, or High/Low quality behavior.
+## Added
 
-## Cleanup performed
+- **Install App** in Options: supported browsers can install 4X4 COUKOO as a full-screen app. On iPhone and iPad, the control explains the Share → Add to Home Screen route.
+- **Offline Play status** in Options: shows whether the PWA app shell is active and whether the browser is currently online.
+- **Offline recovery**: when a navigation request happens without a connection, users see a branded recovery page instead of a generic browser error.
+- **Cache updates**: the service worker keeps app-shell and already-used runtime assets available, removes older versioned caches, and displays a safe update notification when a newer build is waiting.
+- **SEO/social preview**: canonical, Open Graph, Twitter, favicon and manifest paths work under GitHub Pages project URLs as well as root-domain hosting. The included share image is 1200 × 630.
 
-- The disconnected legacy title data was removed from `static/areas/areas.glb`.
-- The active landing scene remains intact: 7 `SARHANG` physical title meshes and `refLandingFlagAnchor` are retained.
-- `areas.glb` is 61,208 bytes smaller after this targeted cleanup.
-- Old phase-specific documentation was consolidated into this release note and `CHANGELOG.md`.
+## Before final deployment
 
-## Release gate
+Set `VITE_SITE_URL` to your public HTTPS address before building when you want absolute canonical and social-preview URLs. Example:
 
 ```bash
-npm run release-check
+VITE_SITE_URL=https://your-project.netlify.app
 ```
 
-The command runs source verification, a production build, and a post-build audit.
+The deploy ZIP works without this variable; it falls back to portable relative URLs for GitHub Pages.
 
-## Known build note
+## Important behavior
 
-Vite reports the required `engine-three` renderer chunk as slightly above its 1500 kB advisory threshold. The project uses real dynamic imports and manual chunks. The advisory remains visible; it is neither suppressed nor a runtime error.
+- The initial 3D launch still requires an internet connection. Game assets are then cached after successful loading, subject to the browser's available storage.
+- No analytics or tracking SDK is included. Adding analytics needs a separate provider, endpoint, consent decision, and privacy policy.
+- The PWA install and service worker require HTTPS (GitHub Pages, Netlify, and Vercel all provide it).

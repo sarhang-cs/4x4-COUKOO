@@ -56,6 +56,10 @@ export class Lighting
         {
             this.applyQualityProfile()
         })
+        this.game.quality.events.on('settingsChange', () =>
+        {
+            this.applyQualityProfile()
+        })
 
         // Debug
         if(this.game.debug.active)
@@ -160,6 +164,7 @@ export class Lighting
         const profile = this.game.quality.getProfile()
         this.mapSize = profile.shadowMapSize
         this.shadowRadius = profile.shadowRadius
+        this.light.castShadow = this.game.quality.getShadowsEnabled()
         this.updateShadow()
     }
 

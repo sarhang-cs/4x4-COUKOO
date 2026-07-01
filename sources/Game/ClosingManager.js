@@ -13,8 +13,7 @@ export class ClosingManager
         this.game = Game.getInstance()
 
         this.game.inputs.addActions([
-            { name: 'close', categories: [ 'modal', 'menu', 'racing', 'cinematic', 'wandering' ], keys: [ 'Keyboard.Escape', 'Gamepad.cross' ] },
-            { name: 'pause', categories: [ 'modal', 'menu', 'racing', 'cinematic', 'wandering' ], keys: [ 'Gamepad.start' ] }
+            { name: 'close', categories: [ 'modal', 'menu', 'racing', 'cinematic', 'wandering' ], keys: [ 'Keyboard.Escape', 'Gamepad.cross' ] }
         ])
         
         // Close input => Go through everything that can be closed
@@ -53,22 +52,6 @@ export class ClosingManager
                 // Nothing opened and used the keyboard Escape key => Open default modal
                 else if(action.activeKeys.has('Keyboard.Escape'))
                     this.game.menu.open()
-            }
-        })
-
-        // Pause input => Close menu or open menu  intro
-        this.game.inputs.events.on('pause', (action) =>
-        {
-            if(action.active)
-            {
-                if(this.game.menu.state === Menu.OPEN || this.game.menu.state === Menu.OPENING)
-                {
-                    this.game.menu.close()
-                }
-                else
-                {
-                    this.game.menu.open('home')
-                }
             }
         })
 

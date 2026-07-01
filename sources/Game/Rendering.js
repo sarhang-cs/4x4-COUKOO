@@ -20,6 +20,10 @@ export class Rendering
         this.renderScale = 1
         this.activePixelRatio = 0
         this.textureQualityDirty = true
+        this.animationLoop = null
+        this.visibilityHandler = null
+        this.frameLimit = this.game.quality.getFpsLimit()
+        this.lastRenderElapsed = -Infinity
         this.performance = {
             lastAdjustmentElapsed: 0,
             slowWindows: 0,
@@ -80,11 +84,15 @@ export class Rendering
         if(location.hash.match(/inspector/i))
             this.renderer.inspector = new Inspector()
 
-        this.renderer.setAnimationLoop((elapsedTime) => this.game.ticker.update(elapsedTime))
         await this.renderer.init()
+
+        this.animationLoop = (elapsedTime) => this.game.ticker.update(elapsedTime)
+        this.renderer.setAnimationLoop(this.animationLoop)
+        this.setVisibilityHandling()
 
         this.isWebGLFallback = this.renderer.backend.isWebGLBackend
         this.applyQualityProfile()
+        this.game.quality.events.on('settingsChange', () => this.applyQualityProfile())
         return this.renderer
     }
 
@@ -133,6 +141,9 @@ export class Rendering
                 ? THREE.AgXToneMapping
                 : THREE.NoToneMapping
             this.renderer.toneMappingExposure = profile.toneMappingExposure
+            this.renderer.shadowMap.enabled = this.game.quality.getShadowsEnabled()
+            this.frameLimit = this.game.quality.getFpsLimit()
+            this.lastRenderElapsed = -Infinity
             this.applyPixelRatio()
         }
 
@@ -163,9 +174,12 @@ export class Rendering
         const nativePixelRatio = this.game.viewport.pixelRatioPure ?? this.game.viewport.pixelRatio
         const viewportPixels = Math.max(1, this.game.viewport.width * this.game.viewport.height)
         const budgetPixelRatio = Math.sqrt(profile.maxRenderPixels / viewportPixels)
-        const maximum = Math.max(0.75, Math.min(profile.pixelRatioLimit, budgetPixelRatio))
-        const minimum = Math.min(maximum, Math.max(0.75, profile.pixelRatioFloor))
-        const desired = nativePixelRatio * this.renderScale
+        const maximum = Math.max(0.5, Math.min(profile.pixelRatioLimit, budgetPixelRatio))
+        const minimum = Math.min(maximum, Math.max(0.5, profile.pixelRatioFloor))
+        // Use the capped device ratio as the baseline. On a 3x phone with a
+        // 1x quality cap this lets adaptive resolution actually step down.
+        const baselinePixelRatio = Math.min(nativePixelRatio, maximum)
+        const desired = baselinePixelRatio * this.renderScale
         const pixelRatio = clamp(desired, minimum, maximum)
 
         if(Math.abs(pixelRatio - this.activePixelRatio) < 0.01)
@@ -173,6 +187,33 @@ export class Rendering
 
         this.activePixelRatio = pixelRatio
         this.renderer.setPixelRatio(pixelRatio)
+    }
+
+    setVisibilityHandling()
+    {
+        if(this.visibilityHandler)
+            return
+
+        this.visibilityHandler = () =>
+        {
+            if(!this.renderer || !this.animationLoop)
+                return
+
+            if(document.visibilityState === 'hidden')
+            {
+                this.renderer.setAnimationLoop(null)
+                return
+            }
+
+            this.performance.lastAdjustmentElapsed = this.game.ticker?.elapsed ?? 0
+            this.performance.slowWindows = 0
+            this.performance.fastWindows = 0
+            this.activePixelRatio = 0
+            this.applyPixelRatio()
+            this.renderer.setAnimationLoop(this.animationLoop)
+        }
+
+        document.addEventListener('visibilitychange', this.visibilityHandler, { passive: true })
     }
 
     updateAdaptiveResolution()
@@ -302,13 +343,30 @@ export class Rendering
 
     resize()
     {
-        this.renderer.setSize(this.game.viewport.width, this.game.viewport.height)
+        this.renderer.setSize(Math.max(1, this.game.viewport.width), Math.max(1, this.game.viewport.height))
         this.activePixelRatio = 0
         this.applyPixelRatio()
     }
 
+    shouldRender()
+    {
+        if(!this.frameLimit)
+            return true
+
+        const elapsed = this.game.ticker.elapsed
+        const interval = 1 / this.frameLimit
+        if(elapsed - this.lastRenderElapsed < interval)
+            return false
+
+        this.lastRenderElapsed = elapsed
+        return true
+    }
+
     render()
     {
+        if(!this.shouldRender())
+            return
+
         this.applyTextureQuality()
         this.postProcessing.render()
         if(this.stats) this.stats.update()

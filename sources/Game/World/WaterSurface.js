@@ -330,14 +330,10 @@ export class WaterSurface
         const qualityChange = (level) =>
         {
             if(level === 0)
-            {
                 material.outputNode = blurredOutput
-            }
-            else if(level === 1)
-            {
+            else
                 material.outputNode = baseOutput
-            }
-            
+
             material.needsUpdate = true
         }
         qualityChange(this.game.quality.level)

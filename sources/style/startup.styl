@@ -1,0 +1,225 @@
+.startup-screen
+    position fixed
+    inset 0
+    z-index 999
+    display grid
+    place-items center
+    padding 24px
+    overflow hidden
+    background radial-gradient(circle at 18% 15%, alpha(#ff754b, 0.18), transparent 31%), radial-gradient(circle at 85% 82%, alpha(#ba4cff, 0.18), transparent 34%), #151018
+    color #f9f5ff
+    transition opacity 0.45s ease, visibility 0.45s ease
+
+    &::before
+        content ''
+        position absolute
+        inset -30%
+        background repeating-linear-gradient(135deg, alpha(#ffffff, 0.045) 0 1px, transparent 1px 13px)
+        transform rotate(-8deg)
+        animation startup-grid-drift 16s linear infinite
+
+    &::after
+        content ''
+        position absolute
+        width min(88vw, 640px)
+        aspect-ratio 1
+        border 1px solid alpha(#ffffff, 0.09)
+        border-radius 50%
+        box-shadow 0 0 0 50px alpha(#ffffff, 0.025), 0 0 0 100px alpha(#ffffff, 0.018)
+        pointer-events none
+
+    &.is-hidden
+        opacity 0
+        visibility hidden
+        pointer-events none
+
+.startup-card
+    position relative
+    z-index 1
+    width min(100%, 500px)
+    padding clamp(28px, 7vw, 50px)
+    border 1px solid alpha(#ffffff, 0.13)
+    border-radius 28px
+    background linear-gradient(145deg, alpha(#2a202f, 0.96), alpha(#17121b, 0.93))
+    box-shadow 0 24px 100px alpha(#000000, 0.42), inset 0 1px 0 alpha(#ffffff, 0.08)
+    backdrop-filter blur(16px)
+
+.startup-brand
+    display flex
+    align-items center
+    gap 14px
+    margin-bottom 32px
+
+.startup-mark
+    position relative
+    display grid
+    grid-template-columns repeat(2, 9px)
+    grid-template-rows repeat(2, 9px)
+    gap 4px
+    width 31px
+    height 31px
+
+    i
+        display block
+        border-radius 3px
+        background #ff754b
+        box-shadow 0 0 18px alpha(#ff754b, 0.65)
+
+        &:nth-child(2), &:nth-child(3)
+            background #d46cff
+            box-shadow 0 0 18px alpha(#d46cff, 0.48)
+
+.startup-brand-copy
+    display grid
+    gap 2px
+
+.startup-eyebrow
+    color alpha(#ffffff, 0.58)
+    font-size 0.62rem
+    font-weight 900
+    letter-spacing 0.18em
+    text-transform uppercase
+
+.startup-brand-name
+    color alpha(#ffffff, 0.94)
+    font-size 0.88rem
+    font-weight 900
+    letter-spacing 0.12em
+
+.startup-kicker
+    margin-bottom 9px
+    color #ffc1a9
+    font-size 0.68rem
+    font-weight 900
+    letter-spacing 0.18em
+    text-transform uppercase
+
+.startup-title
+    margin-bottom 12px
+    color #ffffff
+    font-family "Amatic SC", sans-serif
+    font-size clamp(3.2rem, 13vw, 5.6rem)
+    font-weight 700
+    line-height 0.78
+    letter-spacing 0.03em
+
+.startup-copy
+    max-width 32ch
+    margin-bottom 32px
+    color alpha(#ffffff, 0.72)
+    font-size 0.9rem
+    line-height 1.65
+
+.startup-progress-row
+    display flex
+    align-items center
+    justify-content space-between
+    gap 16px
+    margin-bottom 10px
+
+.startup-status
+    color alpha(#ffffff, 0.94)
+    font-size 0.78rem
+    font-weight 900
+    letter-spacing 0.04em
+
+.startup-progress-value
+    color #ffc1a9
+    font-size 0.78rem
+    font-variant-numeric tabular-nums
+    font-weight 900
+
+.startup-progress
+    --startup-progress 0%
+    position relative
+    height 10px
+    overflow hidden
+    border 1px solid alpha(#ffffff, 0.11)
+    border-radius 999px
+    background alpha(#000000, 0.26)
+
+    &::before
+        content ''
+        position absolute
+        inset 0 auto 0 0
+        width var(--startup-progress)
+        border-radius inherit
+        background linear-gradient(90deg, #ff754b, #fcb35d 52%, #d46cff)
+        box-shadow 0 0 24px alpha(#ff754b, 0.45)
+        transition width 0.38s cubic-bezier(0.2, 0.9, 0.25, 1)
+
+.startup-hint
+    min-height 2.8em
+    margin-top 15px
+    color alpha(#ffffff, 0.48)
+    font-size 0.72rem
+    line-height 1.45
+
+.startup-error-icon
+    width 52px
+    height 52px
+    display grid
+    place-items center
+    margin-bottom 22px
+    border 1px solid alpha(#ff9e7f, 0.46)
+    border-radius 17px
+    color #ffc1a9
+    font-family "Amatic SC", sans-serif
+    font-size 2.1rem
+    font-weight 700
+    box-shadow inset 0 0 22px alpha(#ff754b, 0.12)
+
+.startup-error-title
+    margin-bottom 12px
+    color #ffffff
+    font-size clamp(1.5rem, 6vw, 2rem)
+    font-weight 900
+    line-height 1.08
+
+.startup-error-description
+    max-width 39ch
+    margin-bottom 24px
+    color alpha(#ffffff, 0.68)
+    font-size 0.86rem
+    line-height 1.6
+
+.startup-retry
+    min-width 152px
+    height 48px
+    padding 0 18px
+    border 1px solid alpha(#ffffff, 0.18)
+    border-radius 12px
+    background linear-gradient(135deg, alpha(#ff754b, 0.98), alpha(#d46cff, 0.96))
+    color #ffffff
+    font-weight 900
+    letter-spacing 0.04em
+    transition transform 0.2s ease, filter 0.2s ease
+
+    &:active
+        transform translateY(1px)
+
+    html:not(.is-mode-touch) &:hover
+        filter brightness(1.08)
+        transform translateY(-1px)
+
+.startup-error-code
+    margin-top 16px
+    color alpha(#ffffff, 0.38)
+    font-size 0.66rem
+    letter-spacing 0.09em
+
+@keyframes startup-grid-drift
+    from
+        transform translate3d(-3%, -2%, 0) rotate(-8deg)
+    to
+        transform translate3d(3%, 2%, 0) rotate(-8deg)
+
+@media only screen and (max-width 520px)
+    .startup-screen
+        padding 16px
+
+    .startup-card
+        border-radius 22px
+
+    .startup-brand
+        margin-bottom 28px

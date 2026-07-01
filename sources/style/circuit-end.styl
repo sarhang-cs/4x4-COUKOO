@@ -33,3 +33,25 @@
 
             .or
                 display block
+
+.circuit-end
+    .content
+        .circuit-personal-best
+            display none
+            margin-top -0.25em
+            margin-bottom 0.9em
+            color #d5ff95
+            font-size 0.8rem
+            font-weight 800
+            text-align center
+
+            &.is-visible
+                display block
+
+        .button-share
+            display inline-block
+
+    @media only screen and (max-width 520px)
+        .content
+            .button-share
+                width 100%

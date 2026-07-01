@@ -100,6 +100,11 @@ export class Inputs
             this.updateMode(Inputs.MODE_GAMEPAD)
         })
 
+        this.gamepad.events.on('connection', (detail) =>
+        {
+            this.events.trigger('gamepadConnection', [ detail ])
+        })
+
         this.gamepad.events.on('change', (key) =>
         {
             this.updateMode(Inputs.MODE_GAMEPAD)
@@ -296,6 +301,23 @@ export class Inputs
                     this.events.trigger(action.name, [ action ])
                 }
             }
+        }
+    }
+
+    resetActiveActions()
+    {
+        for(const action of this.actions.values())
+        {
+            if(!action.active && action.activeKeys.size === 0)
+                continue
+
+            action.active = false
+            action.value = 0
+            action.trigger = 'end'
+            action.activeKeys.clear()
+
+            this.events.trigger('actionEnd', [ action ])
+            this.events.trigger(action.name, [ action ])
         }
     }
 

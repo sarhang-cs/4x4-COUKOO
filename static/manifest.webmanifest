@@ -1,0 +1,37 @@
+{
+  "id": "./",
+  "name": "4X4 COUKOO — Interactive Driving World",
+  "short_name": "4X4 COUKOO",
+  "description": "Drive, explore and discover a stylized 3D 4X4 world by SARHANG IO.",
+  "lang": "en",
+  "dir": "ltr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
+  "orientation": "any",
+  "theme_color": "#11151f",
+  "background_color": "#11151f",
+  "categories": ["games", "entertainment"],
+  "icons": [
+    {
+      "src": "./favicons/web-app-manifest-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./favicons/web-app-manifest-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Start driving",
+      "short_name": "Drive",
+      "url": "./"
+    }
+  ]
+}

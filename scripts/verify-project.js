@@ -87,7 +87,7 @@ const packageJson = JSON.parse(readFileSync(join(projectRoot, 'package.json'), '
 assert(packageJson.name === '4x4-coukoo', 'package.json must use the 4x4-coukoo package name')
 assert(packageJson.license === 'MIT', 'package.json must declare the MIT license')
 assert(packageJson.dependencies.three === '0.185.0', 'package.json must pin Three.js 0.185.0 for the renderer guard')
-assert(packageJson.version === '1.7.0', 'package.json must use version 1.7.0')
+assert(/^1\.(?:1[1-9]|[2-9]\d)\.\d+$/.test(packageJson.version), 'package.json must use version 1.11.0 or later')
 assert(!existsSync(join(projectRoot, 'scripts/compress.js')), 'Unused compression script must be removed')
 
 const oldBrandPattern = new RegExp(

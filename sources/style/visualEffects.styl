@@ -1,0 +1,93 @@
+.drive-vfx
+    position absolute
+    inset 0
+    overflow hidden
+    pointer-events none
+    contain layout paint style
+    --drive-vfx-night 0
+    --drive-vfx-rain 0
+    --drive-vfx-snow 0
+    --drive-vfx-speed 0
+    --drive-vfx-dust 0
+    --drive-vfx-storm 0
+
+    > *
+        position absolute
+        inset 0
+        pointer-events none
+
+.drive-vfx__grade
+    background radial-gradient(ellipse at 50% -12%, transparent 0%, transparent 26%, rgba(18, 8, 48, 0.22) 70%, rgba(7, 3, 20, 0.54) 100%)
+    opacity var(--drive-vfx-night)
+    transition opacity 0.6s ease
+
+.drive-vfx__rain
+    opacity var(--drive-vfx-rain)
+    background-image linear-gradient(111deg, transparent 0 44%, rgba(215, 234, 255, 0.6) 45% 46%, transparent 47% 100%), linear-gradient(111deg, transparent 0 49%, rgba(255, 255, 255, 0.4) 50% 51%, transparent 52% 100%)
+    background-size 62px 136px, 96px 206px
+    background-position 0 0, 22px -48px
+    animation drive-vfx-rain 0.42s linear infinite
+    will-change background-position
+
+.drive-vfx__snow
+    opacity var(--drive-vfx-snow)
+    background-image radial-gradient(circle, rgba(255, 255, 255, 0.9) 0 1px, transparent 1.8px), radial-gradient(circle, rgba(230, 245, 255, 0.72) 0 1.5px, transparent 2px)
+    background-size 52px 52px, 81px 81px
+    background-position 0 0, 18px 34px
+    animation drive-vfx-snow 3.2s linear infinite
+    will-change background-position
+
+.drive-vfx__speed
+    opacity var(--drive-vfx-speed)
+    background-image linear-gradient(104deg, transparent 0 38%, rgba(255, 235, 209, 0.56) 40% 40.5%, transparent 42% 100%), linear-gradient(78deg, transparent 0 44%, rgba(203, 222, 255, 0.42) 45% 45.4%, transparent 46.5% 100%), linear-gradient(110deg, transparent 0 63%, rgba(255, 255, 255, 0.34) 64% 64.25%, transparent 65% 100%)
+    background-size 310px 100%, 420px 100%, 540px 100%
+    background-position -60px 0, 90px 0, -170px 0
+    filter blur(0.25px)
+    animation drive-vfx-speed 0.65s linear infinite
+    will-change background-position
+
+.drive-vfx__dust
+    top auto
+    height 47%
+    background radial-gradient(ellipse at 50% 100%, rgba(247, 164, 87, 0.38), rgba(112, 53, 69, 0.14) 46%, transparent 74%)
+    opacity var(--drive-vfx-dust)
+    filter blur(15px)
+    transform translateY(24%) scale(1.15)
+    transition opacity 0.18s linear
+
+.drive-vfx__storm
+    opacity var(--drive-vfx-storm)
+    background radial-gradient(ellipse at 50% 0%, rgba(180, 214, 255, 0.9), rgba(124, 112, 255, 0.25) 35%, transparent 72%)
+    mix-blend-mode screen
+    animation drive-vfx-storm 1.7s steps(2, end) infinite
+
+html.is-visual-effects-disabled .drive-vfx
+    display none
+
+@keyframes drive-vfx-rain
+    from
+        background-position 0 0, 22px -48px
+    to
+        background-position -42px 176px, -12px 218px
+
+@keyframes drive-vfx-snow
+    from
+        background-position 0 0, 18px 34px
+    to
+        background-position -24px 94px, 58px 160px
+
+@keyframes drive-vfx-speed
+    from
+        background-position -60px 0, 90px 0, -170px 0
+    to
+        background-position -330px 0, 430px 0, -690px 0
+
+@keyframes drive-vfx-storm
+    0%
+    22%
+    100%
+        opacity calc(var(--drive-vfx-storm) * 0.4)
+    24%
+        opacity var(--drive-vfx-storm)
+    26%
+        opacity calc(var(--drive-vfx-storm) * 0.18)

@@ -1,37 +1,41 @@
-# 4X4 COUKOO v1.7.0 — Final QA Report
+# 4X4 COUKOO — Phase 10 Final QA Report
 
-## Automated checks completed
+## Scope
 
-```text
-npm run verify        PASS
-npm run build         PASS
-npm run release-check PASS
-npm audit             0 vulnerabilities
-```
+Phase 10 prepares the finished static game for production distribution without adding heavyweight 3D content:
 
-## Targeted cleanup
+- Installable PWA manifest and icons
+- Root-scoped service worker with versioned caches, offline app shell, runtime asset caching, and safe updates
+- Install App / Offline Play status controls in Options
+- iOS Add to Home Screen guidance
+- Portable SEO, canonical, Open Graph, Twitter, favicon, and share-card metadata
+- GitHub Pages, Netlify, and Vercel deployment compatibility
+- Optional public-URL configuration through `VITE_SITE_URL`
 
-`static/areas/areas.glb` was cleaned without touching the active scene:
+## Automated checks
 
-- Removed: 20 disconnected legacy title nodes and 10 meshes.
-- Preserved: 732 reachable nodes, 263 meshes, 7 physical `SARHANG` title meshes, and `refLandingFlagAnchor`.
-- Size: 3,660,596 bytes → 3,599,388 bytes (61,208 bytes removed).
+| Check | Result |
+| --- | --- |
+| `npm test` | PASS — Phases 1–10 |
+| `npm run verify` | PASS — 166 source files checked |
+| `npm run build` | PASS — 416 modules transformed |
+| `npm run release-check` | PASS — production audit passed |
+| `npm audit --omit=dev --audit-level=high` | PASS — 0 vulnerabilities |
 
-## Runtime asset inventory
+## Production output
 
-```text
-MP3 : 88
-GLB : 64
-KTX : 88
-WAV : 0
-```
+- 136 duplicate/source-only production files pruned: **24.31 MB** removed.
+- Production release audit confirmed the game chunks, validated `areas.glb`, the manifest, service worker, offline page, and resolved metadata placeholders.
+- The expected Three.js engine bundle remains above Vite’s 1.5 MB advisory threshold; this is an existing performance trade-off and does not fail the build.
 
-The release audit fails if the MP3 count changes, if a WAV file reappears, if the landing model contains disconnected nodes, or if the production build is missing the main game/engine chunks.
+## Deployment notes
 
-## Build note
+- The PWA requires HTTPS or localhost. GitHub Pages, Netlify, and Vercel provide HTTPS.
+- On first visit, the service worker prepares the offline shell. Game assets cache only after they download successfully, subject to device storage capacity.
+- Set `VITE_SITE_URL` to the real public URL before a final hosted build when absolute canonical and social-preview URLs are required. When it is blank, the build uses portable relative paths suitable for GitHub Pages project URLs.
+- The package engine range is `>=22.12.0 <25`; production build and QA were executed successfully on Node 22.16.0.
+- Physical-device verification remains necessary for Web Share, PWA installation prompt, iOS Add to Home Screen, offline behavior under real storage limits, controller behavior, and Low/Medium/High graphics presets.
 
-Vite still reports a size advisory for the required `engine-three` cache chunk (about 1.61 MB minified). Dynamic loading and manual chunks remain active. The advisory is not hidden and is not a runtime error.
+## Privacy note
 
-## Post-deploy manual confirmation
-
-Automated checks cannot inspect the browser console of the live Vercel deployment. After deployment, verify one fresh load on mobile and one on desktop: enter the world, move the vehicle, open Settings, switch Low/High, confirm sound after interaction, and check that no red console error repeats.
+No analytics or third-party tracking SDK was added. Analytics should only be introduced after selecting a provider, endpoint, privacy policy, and consent approach.

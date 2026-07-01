@@ -97,8 +97,33 @@ assert(glbFiles.length > 0, 'No GLB assets were found')
 assert(ktxFiles.length > 0, 'No KTX assets were found')
 
 assert(existsSync(join(distRoot, 'index.html')), 'Production dist/index.html is missing')
+assert(existsSync(join(distRoot, 'manifest.webmanifest')), 'Production PWA manifest is missing')
+assert(existsSync(join(distRoot, 'sw.js')), 'Production service worker is missing')
+assert(existsSync(join(distRoot, 'offline.html')), 'Production offline fallback is missing')
+const distIndex = existsSync(join(distRoot, 'index.html')) ? readFileSync(join(distRoot, 'index.html'), 'utf8') : ''
+assert(!distIndex.includes('__COUKOO_'), 'Production metadata still contains unresolved URL placeholders')
+assert(distIndex.includes('manifest.webmanifest'), 'Production HTML does not link the web app manifest')
 const distFiles = existsSync(distRoot) ? walk(distRoot) : []
 const distAssetNames = distFiles.map((file) => file.split('/').at(-1))
+
+// Production deliberately uses compressed resource pairs. Keep the one validated
+// landing scene exception, and make regressions in deploy-package pruning visible.
+for(const file of distFiles)
+{
+    if(file.endsWith('.glb') && !file.endsWith('-compressed.glb') && !file.endsWith('/areas/areas.glb'))
+    {
+        const compressedVariant = file.replace(/\.glb$/, '-compressed.glb')
+        assert(!existsSync(compressedVariant), `Duplicate uncompressed GLB remains in dist: ${file.replace(`${distRoot}/`, '')}`)
+    }
+
+    if(file.endsWith('.png'))
+    {
+        const compressedVariant = file.replace(/\.png$/, '.ktx')
+        assert(!existsSync(compressedVariant), `Duplicate PNG/KTX texture remains in dist: ${file.replace(`${distRoot}/`, '')}`)
+    }
+}
+assert(existsSync(join(distRoot, 'areas', 'areas.glb')), 'Validated landing areas.glb is missing from production output')
+assert(!existsSync(join(distRoot, 'areas', 'areas-compressed.glb')), 'Invalid compressed landing areas variant must not ship')
 for(const prefix of [ 'engine-three-', 'engine-physics-', 'Game-' ])
     assert(distAssetNames.some((name) => name.startsWith(prefix) && name.endsWith('.js')), `Production chunk is missing: ${prefix}`)
 assert(distAssetNames.some((name) => name.endsWith('.css')), 'Production CSS chunk is missing')

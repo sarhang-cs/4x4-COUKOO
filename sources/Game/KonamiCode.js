@@ -51,9 +51,10 @@ export class KonamiCode
 
     async activate()
     {
+        const compressedModelSuffix = import.meta.env.VITE_COMPRESSED === '1' ? '-compressed' : ''
         const files = [
-            'vehicle/oldSchool.glb',
-            'vehicle/default.glb'
+            `vehicle/oldSchool${compressedModelSuffix}.glb`,
+            `vehicle/default${compressedModelSuffix}.glb`
         ]
         
         const resources = await this.game.resourcesLoader.load([

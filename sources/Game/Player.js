@@ -330,12 +330,11 @@ export class Player
     {
         this.distanceDriven = {}
 
-        const localDistanceDriven = localStorage.getItem('distanceDriven')
-        this.distanceDriven.value = localDistanceDriven ? parseInt(localDistanceDriven) : 0
+        this.distanceDriven.value = this.game.save.get('progress.distanceDriven', 0)
         this.distanceDriven.floored = Math.floor(this.distanceDriven.value)
         this.distanceDriven.reset = () =>
         {
-            localStorage.removeItem('distanceDriven')
+            this.game.save.set('progress.distanceDriven', 0, { immediate: true })
             this.distanceDriven.value = 0
             this.distanceDriven.floored = 0
         }
@@ -454,15 +453,14 @@ export class Player
 
     setTimePlayed()
     {
-        const localTimePlayed = localStorage.getItem('timePlayed')
         this.timePlayed = {}
-        this.timePlayed.all = localTimePlayed ? parseFloat(localTimePlayed) : 0
+        this.timePlayed.all = this.game.save.get('progress.timePlayed', 0)
         this.timePlayed.session = 0
         this.timePlayed.achieved = false
 
         setInterval(() =>
         {
-            localStorage.setItem('timePlayed', this.timePlayed.all)
+            this.game.save.set('progress.timePlayed', this.timePlayed.all)
         }, 1000)
     }
 
@@ -661,7 +659,7 @@ export class Player
 
         if(flooredDistanceDriven !== this.distanceDriven.floored)
         {
-            localStorage.setItem('distanceDriven', flooredDistanceDriven)
+            this.game.save.set('progress.distanceDriven', flooredDistanceDriven)
             this.distanceDriven.floored = flooredDistanceDriven
         }
         

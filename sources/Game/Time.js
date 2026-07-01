@@ -11,6 +11,7 @@ export class Time
 
         this.defaultScale = 2
         this._scale = this.defaultScale
+        this.paused = false
         this.game.ticker.scale = this.scale
         gsap.globalTimeline.timeScale(this.scale)
 
@@ -60,6 +61,9 @@ export class Time
 
     update()
     {
+        if(this.paused)
+            return
+
         if(Date.now() > this.bulletTime.endTime)
             this.bulletTime.active = false
 
@@ -69,6 +73,26 @@ export class Time
 
         this.scale = remap(this.bulletTime.progress, 0, 1, this.defaultScale, this.bulletTime.scale)
         // console.log(this.bulletTime.progress)
+    }
+
+    pause()
+    {
+        if(this.paused)
+            return
+
+        this.paused = true
+        this.game.ticker.scale = 0
+        gsap.globalTimeline.timeScale(0)
+    }
+
+    resume()
+    {
+        if(!this.paused)
+            return
+
+        this.paused = false
+        const nextScale = remap(this.bulletTime.progress, 0, 1, this.defaultScale, this.bulletTime.scale)
+        this.scale = nextScale
     }
 
     set scale(value)

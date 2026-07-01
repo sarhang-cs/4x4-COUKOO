@@ -1,0 +1,157 @@
+.tutorial
+.pause
+    display flex
+    position fixed
+    z-index 30
+    align-items center
+    justify-content center
+    inset 0
+    padding 24px
+    color #ffffff
+    opacity 0
+    pointer-events none
+    background linear-gradient(135deg, alpha(#0e0a12, 0.72), alpha(#2f0c37, 0.78))
+    backdrop-filter blur(10px)
+    transition opacity 0.2s ease
+
+    &.is-visible
+        opacity 1
+        pointer-events auto
+
+.tutorial-card
+.pause-card
+    width min(100%, 500px)
+    border 1px solid alpha(#ffffff, 0.45)
+    border-radius 18px
+    padding 28px
+    background radial-gradient(ellipse at top left, #47144a, #1d1721 72%)
+    box-shadow 0 24px 80px alpha(#000000, 0.48)
+
+    @media only screen and (max-width 520px)
+        padding 23px 20px
+        border-radius 15px
+
+.tutorial-topline
+    display flex
+    align-items center
+    justify-content space-between
+    gap 16px
+    margin-bottom 12px
+    font-size 0.7rem
+    font-weight 800
+    letter-spacing 0.12em
+
+.tutorial-eyebrow
+    color #ffc785
+
+.tutorial-brand
+    opacity 0.7
+
+.tutorial-progress
+    position relative
+    width 100%
+    height 5px
+    margin-bottom 24px
+    overflow hidden
+    border-radius 99px
+    background alpha(#ffffff, 0.15)
+
+    &::after
+        content ''
+        display block
+        width var(--tutorial-progress, 25%)
+        height 100%
+        border-radius inherit
+        background linear-gradient(90deg, #ffb566, #ed6cae)
+        transition width 0.25s ease
+
+.tutorial-title
+.pause-title
+    margin-bottom 10px
+    font-family "Amatic SC", sans-serif
+    font-size 3rem
+    line-height 0.95
+
+.tutorial-copy
+.pause-copy
+    margin-bottom 18px
+    line-height 1.5
+    opacity 0.92
+
+.tutorial-input
+    margin-bottom 24px
+    padding 12px 14px
+    border-left 3px solid #ffc785
+    border-radius 0 8px 8px 0
+    color #ffe3bd
+    background alpha(#ffffff, 0.08)
+    font-size 0.85rem
+    font-weight 700
+
+.tutorial-actions
+    display flex
+    align-items center
+    justify-content space-between
+    gap 16px
+
+.tutorial-link
+.pause-link
+    color alpha(#ffffff, 0.75)
+    text-decoration underline
+
+    html:not(.is-mode-touch) &:hover
+        color #ffffff
+
+.tutorial-next
+.pause-primary
+    color #fff8ee
+    border-color #ffc785
+    background linear-gradient(110deg, #cf5f3d, #a63875)
+
+.pause-card
+    text-align center
+
+.pause-kicker
+    margin-bottom 4px
+    color #ffc785
+    font-size 0.72rem
+    font-weight 900
+    letter-spacing 0.2em
+
+.pause-actions
+    display grid
+    grid-template-columns repeat(2, minmax(0, 1fr))
+    gap 10px
+    margin-top 22px
+
+    .button:first-child
+        grid-column 1 / -1
+
+    @media only screen and (max-width 400px)
+        grid-template-columns 1fr
+
+        .button:first-child
+            grid-column auto
+
+.pause-actions .button
+    width 100%
+    height 50px
+    line-height 48px
+
+.pause-link
+    margin-top 18px
+
+.pause-hint
+    margin-top 18px
+    font-size 0.72rem
+    opacity 0.68
+
+.tutorial-replay-row
+    display flex
+    justify-content center
+    margin-top 18px
+
+.tutorial-replay
+    height 46px
+    line-height 44px
+    font-size 0.82rem
