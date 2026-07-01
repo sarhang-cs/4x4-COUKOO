@@ -25,6 +25,7 @@ export class Rendering
         this.frameLimit = this.game.quality.getFpsLimit()
         this.lastRenderElapsed = -Infinity
         this.lastRenderTimestamp = -Infinity
+        this.frameAccumulator = 0
         this.performance = {
             lastAdjustmentElapsed: 0,
             slowWindows: 0,
@@ -149,6 +150,7 @@ export class Rendering
             this.frameLimit = this.game.quality.getFpsLimit()
             this.lastRenderElapsed = -Infinity
             this.lastRenderTimestamp = -Infinity
+            this.frameAccumulator = 0
             this.applyPixelRatio()
         }
 
@@ -254,7 +256,12 @@ export class Rendering
 
         this.performance.lastAdjustmentElapsed = elapsed
 
-        if(frameTime > profile.targetFrameTime * 1.18)
+        const configuredLimit = this.game.quality.getFpsLimit()
+        const targetFrameTime = configuredLimit > 0
+            ? 1000 / configuredLimit * 0.96
+            : profile.targetFrameTime
+
+        if(frameTime > targetFrameTime * 1.18)
         {
             this.performance.slowWindows++
             this.performance.fastWindows = 0
@@ -269,7 +276,7 @@ export class Rendering
             return
         }
 
-        if(frameTime < profile.targetFrameTime * 0.72)
+        if(frameTime < targetFrameTime * 0.72)
         {
             this.performance.fastWindows++
             this.performance.slowWindows = 0
@@ -374,15 +381,28 @@ export class Rendering
         if(!this.frameLimit)
             return true
 
-        // Use the browser's monotonic clock rather than the game ticker. This
-        // remains stable through visibility changes and avoids a stalled canvas
-        // after a frame-rate setting is changed on mobile Chromium.
+        // Use a time accumulator rather than a simple elapsed threshold. This
+        // gives correct fractional pacing such as 45 FPS on a 60 Hz display
+        // (instead of accidentally falling to 30 FPS), while game/physics ticks
+        // continue independently from the render cap.
         const timestamp = performance.now()
         const interval = 1000 / this.frameLimit
-        if(timestamp - this.lastRenderTimestamp < interval)
+
+        if(!Number.isFinite(this.lastRenderTimestamp) || this.lastRenderTimestamp < 0)
+        {
+            this.lastRenderTimestamp = timestamp
+            this.frameAccumulator = interval
+            return true
+        }
+
+        const elapsed = clamp(timestamp - this.lastRenderTimestamp, 0, 250)
+        this.lastRenderTimestamp = timestamp
+        this.frameAccumulator = Math.min(interval * 2.5, this.frameAccumulator + elapsed)
+
+        if(this.frameAccumulator + 0.1 < interval)
             return false
 
-        this.lastRenderTimestamp = timestamp
+        this.frameAccumulator -= interval
         return true
     }
 

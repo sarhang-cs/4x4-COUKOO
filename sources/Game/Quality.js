@@ -14,7 +14,34 @@ const QUALITY_LEVELS = Object.freeze({
 
 const VALID_LEVELS = new Set(Object.values(QUALITY_LEVELS))
 const VALID_SHADOW_MODES = new Set([ 'auto', 'on', 'off' ])
-const VALID_FPS_LIMITS = new Set([ 0, 30, 60 ])
+// 0 is reserved for the native, uncapped 120+ mode. The renderer still follows
+// requestAnimationFrame, so it can never exceed the browser/display cadence.
+const VALID_FPS_LIMITS = new Set([ 0, 30, 45, 60, 90, 120 ])
+const FRAME_RATE_STEPS = Object.freeze([ 30, 45, 60, 90, 120 ])
+const HIGH_REFRESH_NATIVE = 0
+
+const clamp = (value, min, max) => Math.max(min, Math.min(value, max))
+const median = (values) =>
+{
+    if(!values.length)
+        return 0
+
+    const sorted = [ ...values ].sort((a, b) => a - b)
+    const middle = Math.floor(sorted.length / 2)
+    return sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) * 0.5
+}
+
+const snapRefreshRate = (value) =>
+{
+    const candidates = [ 30, 45, 48, 50, 60, 72, 75, 90, 100, 120, 144, 165, 180, 200, 240 ]
+    const closest = candidates.reduce((best, candidate) =>
+        Math.abs(candidate - value) < Math.abs(best - value) ? candidate : best
+    , candidates[0])
+
+    return Math.abs(closest - value) / Math.max(1, closest) <= 0.18
+        ? closest
+        : Math.round(value)
+}
 
 export class Quality
 {
@@ -99,6 +126,7 @@ export class Quality
         const mobileHighTier = isMobile && !mobileConstrained && (!memoryKnown || memory >= 6) && cores >= 6 && gpu.maxTextureSize >= 8192
         const premiumDesktop = desktop && (!memoryKnown || memory >= 8) && cores >= 6 && gpu.maxTextureSize >= 8192 && gpu.maxRenderbufferSize >= 8192
         const ultraDesktop = premiumDesktop && (!memoryKnown || memory >= 12) && cores >= 8 && gpu.maxTextureSize >= 16384 && (gpu.dedicatedHint || gpu.maxSamples >= 4)
+        const provisionalMaxFps = !slowConnection && (mobileHighTier || premiumDesktop || ultraDesktop) ? 60 : 30
 
         return {
             isMobile,
@@ -112,7 +140,15 @@ export class Quality
             tier: ultraDesktop ? 'ultra' : premiumDesktop || mobileHighTier ? 'high' : 'balanced',
             isConstrained: mobileConstrained || desktopConstrained,
             isMobileConstrained: mobileConstrained,
-            supports60: !slowConnection && (mobileHighTier || premiumDesktop || ultraDesktop),
+            supports60: provisionalMaxFps >= 60,
+            supportsHighRefresh: false,
+            refresh: {
+                state: 'waiting',
+                measuredHz: null,
+                maxFps: provisionalMaxFps,
+                source: 'Initial browser profile',
+                samples: 0,
+            },
             storage: { quota: null, usage: null, available: null },
             browser: navigator.userAgentData?.brands?.map((brand) => `${brand.brand} ${brand.version}`).join(', ') || navigator.userAgent || '',
             model: '',
@@ -154,9 +190,180 @@ export class Quality
         }
     }
 
-    getRecommendedFpsLimit()
+    /**
+     * Measures the cadence that this browser is actually allowed to present.
+     * There is no dependable web API that exposes the physical panel refresh
+     * rate on every phone/monitor, so requestAnimationFrame is the most honest
+     * source: it reflects the current browser, display mode, battery policy and
+     * OS cap together. The sample runs after the world has finished loading.
+     */
+    startFrameRateProbe({ delay = 900 } = {})
     {
-        return this.device.supports60 ? 60 : 30
+        if(this.frameRateProbeRunning || this.frameRateProbeScheduled)
+            return
+
+        this.frameRateProbeScheduled = true
+        window.setTimeout(() =>
+        {
+            this.frameRateProbeScheduled = false
+            this.measureFrameRate()
+        }, delay)
+    }
+
+    measureFrameRate()
+    {
+        if(this.frameRateProbeRunning || typeof window.requestAnimationFrame !== 'function')
+            return
+
+        if(document.visibilityState === 'hidden')
+        {
+            this.startFrameRateProbe({ delay: 1200 })
+            return
+        }
+
+        this.frameRateProbeRunning = true
+        this.device.refresh = {
+            ...this.device.refresh,
+            state: 'measuring',
+            source: 'Measuring browser display cadence',
+        }
+        this.events.trigger('deviceChange', [ this.device ])
+
+        const intervals = []
+        let previous = 0
+        let startedAt = 0
+        let warmup = 8
+
+        const complete = () =>
+        {
+            this.frameRateProbeRunning = false
+
+            const stableSamples = intervals.filter((interval) => interval >= 3 && interval <= 70)
+            const interval = median(stableSamples)
+            const rawHz = interval > 0 ? 1000 / interval : this.device.refresh.maxFps
+            const measuredHz = Math.max(30, snapRefreshRate(rawHz))
+            const maxFps = FRAME_RATE_STEPS.filter((value) => value <= measuredHz + 2).at(-1) ?? 30
+
+            this.device.refresh = {
+                state: 'ready',
+                measuredHz,
+                maxFps,
+                source: 'Measured requestAnimationFrame cadence',
+                samples: stableSamples.length,
+            }
+            this.device.supports60 = maxFps >= 60
+            this.device.supportsHighRefresh = maxFps >= 90
+
+            const before = Number(this.game.save?.get('settings.fpsLimit', 0))
+            const next = this.normalizeFpsLimitForLevel(this.level, { persist: true })
+            this.events.trigger('deviceChange', [ this.device ])
+
+            if(before !== next)
+                this.events.trigger('settingsChange', [ 'fpsLimit', next ])
+        }
+
+        const sample = (timestamp) =>
+        {
+            if(document.visibilityState === 'hidden')
+            {
+                complete()
+                return
+            }
+
+            if(!startedAt)
+                startedAt = timestamp
+
+            if(previous)
+            {
+                const interval = timestamp - previous
+                if(warmup > 0)
+                    warmup--
+                else if(Number.isFinite(interval))
+                    intervals.push(interval)
+            }
+
+            previous = timestamp
+
+            if(intervals.length >= 96 || timestamp - startedAt >= 1600)
+            {
+                complete()
+                return
+            }
+
+            window.requestAnimationFrame(sample)
+        }
+
+        window.requestAnimationFrame(sample)
+    }
+
+    getMeasuredRefreshHz()
+    {
+        return Math.max(30, Number(this.device.refresh?.measuredHz ?? this.device.refresh?.maxFps ?? 30))
+    }
+
+    getDisplayFpsLimits()
+    {
+        const maxFps = this.getMeasuredRefreshHz()
+        const limits = FRAME_RATE_STEPS.filter((value) => value <= maxFps + 2)
+        return limits.length ? limits : [ 30 ]
+    }
+
+    getTierFpsLimits(level = this.level)
+    {
+        if(level === QUALITY_LEVELS.LOW)
+            return [ 30, 45 ]
+
+        if(level === QUALITY_LEVELS.MEDIUM)
+            return [ 45, 60, 90 ]
+
+        return [ 90, 120 ]
+    }
+
+    getAvailableFpsLimits(level = this.level)
+    {
+        const displayLimits = this.getDisplayFpsLimits()
+        const tierLimits = this.getTierFpsLimits(level)
+        const available = tierLimits.filter((value) => displayLimits.includes(value))
+
+        // Keep every profile usable on a lower-refresh display. In that case the
+        // highest real display rate is the only fallback instead of offering an
+        // impossible value such as 90 FPS on a 60 Hz phone.
+        if(!available.length)
+            available.push(displayLimits.at(-1) ?? 30)
+
+        // Native/uncapped mode is only exposed when the browser demonstrably
+        // presents faster than 120 Hz. It is still limited by rAF/display sync.
+        if(level === QUALITY_LEVELS.HIGH && this.getMeasuredRefreshHz() > 120)
+            available.push(HIGH_REFRESH_NATIVE)
+
+        return [ ...new Set(available) ]
+    }
+
+    getRecommendedFpsLimit(level = this.level)
+    {
+        const available = this.getAvailableFpsLimits(level)
+        const fixed = available.filter((value) => value > 0)
+        return fixed.at(-1) ?? available[0] ?? 30
+    }
+
+    getFpsLabel(limit = this.getFpsLimit())
+    {
+        if(limit === HIGH_REFRESH_NATIVE)
+        {
+            const measured = this.getMeasuredRefreshHz()
+            return measured > 120 ? `120+ FPS · Native ${measured} Hz` : 'Native FPS'
+        }
+
+        return `${limit} FPS`
+    }
+
+    getFpsDescription(limit, level = this.level)
+    {
+        if(limit === HIGH_REFRESH_NATIVE)
+            return `Uses the full measured ${this.getMeasuredRefreshHz()} Hz browser/display cadence. The game simulation remains time-based.`
+
+        const tier = this.getLabel(level)
+        return `${tier} profile capped at ${limit} FPS. Game physics, timers, controls, audio and server updates keep running on time, not on the render cap.`
     }
 
     getDeviceSummary()
@@ -165,7 +372,10 @@ export class Quality
         const tier = this.device.tier === 'high' || this.device.tier === 'ultra' ? 'High-capability' : this.device.isConstrained ? 'Constrained' : 'Balanced'
         const cores = this.device.cores ? `${this.device.cores} logical cores` : 'CPU details unavailable'
         const memory = this.device.memory ? `${this.device.memory} GB reported RAM` : 'RAM unavailable'
-        return `${type} · ${tier} · ${cores} · ${memory}`
+        const refresh = this.device.refresh?.state === 'ready'
+            ? `${this.getMeasuredRefreshHz()} Hz measured`
+            : 'refresh checking'
+        return `${type} · ${tier} · ${refresh} · ${cores} · ${memory}`
     }
 
     getDeviceDetails()
@@ -176,7 +386,13 @@ export class Quality
             : 'Storage details unavailable'
         const screen = `${window.screen?.width ?? 0}×${window.screen?.height ?? 0} @ ${window.devicePixelRatio || 1}x`
         const model = this.device.model ? `${this.device.model} · ` : ''
-        return `${model}${this.getDeviceSummary()} · ${screen} · GPU: ${gpu} · ${storage}. Browser APIs provide reported capabilities, not guaranteed exact hardware specifications.`
+        const refresh = this.device.refresh?.state === 'ready'
+            ? `${this.getMeasuredRefreshHz()} Hz measured from ${this.device.refresh.samples} browser frames`
+            : 'refresh rate is still being measured'
+        const fps = this.getAvailableFpsLimits()
+            .map((value) => this.getFpsLabel(value))
+            .join(' · ')
+        return `${model}${this.getDeviceSummary()} · ${screen} · ${refresh} · GPU: ${gpu} · ${storage} · Current-profile FPS: ${fps}. Browser APIs provide reported capabilities and measured browser cadence, not guaranteed exact physical hardware specifications.`
     }
 
     getInitialLevel()
@@ -285,22 +501,12 @@ export class Quality
     getFpsLimit()
     {
         const saved = Number(this.game.save.get('settings.fpsLimit', 0))
-        const allowed = this.getAvailableFpsLimits()
+        const allowed = this.getAvailableFpsLimits(this.level)
 
         if(allowed.includes(saved))
             return saved
 
-        if(saved === 60 && !allowed.includes(60))
-            return 30
-
-        return 0
-    }
-
-    getAvailableFpsLimits()
-    {
-        return this.device.supports60
-            ? [ 0, 60, 30 ]
-            : [ 0, 30 ]
+        return this.getRecommendedFpsLimit(this.level)
     }
 
     getProfile(level = this.level)
@@ -367,7 +573,7 @@ export class Quality
                 shadowsEnabled: true,
                 textureAnisotropy: isMobile ? 4 : 6,
                 toneMappingExposure: 1.04,
-                visibilityMultiplier: 1.18,
+                visibilityMultiplier: 1.32,
             }
         }
 
@@ -401,7 +607,7 @@ export class Quality
                 shadowsEnabled: true,
                 textureAnisotropy: isConstrained ? 4 : 8,
                 toneMappingExposure: 1.08,
-                visibilityMultiplier: isConstrained ? 1.32 : 1.5,
+                visibilityMultiplier: isConstrained ? 1.55 : 1.75,
             }
         }
 
@@ -433,7 +639,7 @@ export class Quality
                 shadowsEnabled: true,
                 textureAnisotropy: 16,
                 toneMappingExposure: 1.16,
-                visibilityMultiplier: 1.55,
+                visibilityMultiplier: 1.85,
             }
         }
 
@@ -465,7 +671,7 @@ export class Quality
                 shadowsEnabled: true,
                 textureAnisotropy: 16,
                 toneMappingExposure: 1.1,
-                visibilityMultiplier: 1.5,
+                visibilityMultiplier: 1.72,
             }
         }
 
@@ -495,7 +701,7 @@ export class Quality
             shadowsEnabled: true,
             textureAnisotropy: 12,
             toneMappingExposure: 1.06,
-            visibilityMultiplier: 1.4,
+            visibilityMultiplier: 1.6,
         }
     }
 
@@ -511,6 +717,7 @@ export class Quality
         const requiresWorldReload = previousAssetProfile.compressedAssets !== assetProfile.compressedAssets
 
         this.game.save.set('settings.quality', this.level, { immediate: true })
+        this.normalizeFpsLimitForLevel(this.level, { persist: true })
         if(notify)
             this.events.trigger('change', [ this.level, this.getProfile(), { previousAssetProfile, assetProfile, requiresWorldReload } ])
     }
@@ -535,9 +742,11 @@ export class Quality
 
     setFpsLimit(limit = 0, { notify = true } = {})
     {
-        const allowed = this.getAvailableFpsLimits()
+        const allowed = this.getAvailableFpsLimits(this.level)
         const numericLimit = Number(limit)
-        const nextLimit = allowed.includes(numericLimit) ? numericLimit : allowed[0]
+        const nextLimit = allowed.includes(numericLimit)
+            ? numericLimit
+            : this.getRecommendedFpsLimit(this.level)
         if(nextLimit === this.getFpsLimit())
             return
 
@@ -548,8 +757,22 @@ export class Quality
 
     cycleFpsLimit()
     {
-        const order = this.getAvailableFpsLimits()
+        const order = this.getAvailableFpsLimits(this.level)
         const currentIndex = order.indexOf(this.getFpsLimit())
         this.setFpsLimit(order[(currentIndex + 1) % order.length])
+    }
+
+    normalizeFpsLimitForLevel(level = this.level, { persist = false } = {})
+    {
+        const allowed = this.getAvailableFpsLimits(level)
+        const saved = Number(this.game.save?.get('settings.fpsLimit', 0))
+        const next = allowed.includes(saved)
+            ? saved
+            : this.getRecommendedFpsLimit(level)
+
+        if(persist && this.game.save)
+            this.game.save.set('settings.fpsLimit', next, { immediate: true })
+
+        return next
     }
 }

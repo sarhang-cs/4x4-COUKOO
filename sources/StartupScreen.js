@@ -96,6 +96,25 @@ export class StartupScreen
         }, 60000)
     }
 
+    showForReload(stage = 'Preparing the selected game settings…')
+    {
+        this.clearTimers()
+        this.hidden = false
+        this.failed = false
+        this.progress = 0
+
+        this.loadingPanel?.removeAttribute('hidden')
+        this.errorPanel?.setAttribute('hidden', '')
+        this.element?.classList.remove('is-hidden', 'has-error', 'is-slow')
+        this.element?.setAttribute('aria-hidden', 'false')
+        document.documentElement.classList.remove('is-ready', 'is-startup-failed')
+        document.documentElement.classList.add('is-starting')
+
+        this.setStage(stage, 'Restarting the 3D world with your selected settings.')
+        this.setProgress(4)
+        this.setSlowConnectionTimers()
+    }
+
     clearTimers()
     {
         window.clearTimeout(this.slowTimer)

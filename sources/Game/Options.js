@@ -108,17 +108,17 @@ export class Options
         const update = () =>
         {
             const limit = this.game.quality.getFpsLimit()
-            const recommended = this.game.quality.getRecommendedFpsLimit()
-            fpsText.textContent = limit ? `${limit} FPS` : `Auto · ${recommended} target`
+            const measuredRefresh = this.game.quality.getMeasuredRefreshHz()
+            fpsText.textContent = this.game.quality.getFpsLabel(limit)
             fpsElement.setAttribute('aria-label', `Frame rate limit: ${fpsText.textContent}. Tap to change.`)
 
             const fpsTooltip = fpsElement.querySelector('.tooltip')
             if(fpsTooltip)
             {
-                const options = this.game.quality.getAvailableFpsLimits()
-                    .map((value) => value ? `${value} FPS` : 'Auto')
+                const options = this.game.quality.getAvailableFpsLimits(this.game.quality.level)
+                    .map((value) => this.game.quality.getFpsLabel(value))
                     .join(' · ')
-                fpsTooltip.textContent = `Available on this device: ${options}`
+                fpsTooltip.textContent = `Measured browser/display cadence: ${measuredRefresh} Hz. Available for ${this.game.quality.getLabel()}: ${options}`
             }
 
             const shadowMode = this.game.quality.getShadowMode()
@@ -136,28 +136,27 @@ export class Options
 
         fpsElement.addEventListener('click', () =>
         {
-            const recommended = this.game.quality.getRecommendedFpsLimit()
-            const fpsOptions = this.game.quality.getAvailableFpsLimits().map((value) => ({
+            const quality = this.game.quality
+            const measuredRefresh = quality.getMeasuredRefreshHz()
+            const fpsOptions = quality.getAvailableFpsLimits(quality.level).map((value) => ({
                 value,
-                title: value ? `${value} FPS` : `Auto · ${recommended} FPS target`,
-                description: value
-                    ? `Keeps the renderer near ${value} frames per second.`
-                    : `Uses this device profile and adapts toward ${recommended} FPS when the browser allows it.`,
+                title: quality.getFpsLabel(value),
+                description: quality.getFpsDescription(value),
             }))
 
             this.openSettingsPicker({
                 title: 'Choose frame-rate mode',
-                description: 'Frame-rate changes restart the 3D renderer cleanly so the canvas does not glitch or turn blank.',
-                value: this.game.quality.getFpsLimit(),
+                description: `Measured browser/display cadence: ${measuredRefresh} Hz. Only frame rates this device can present are shown. The renderer restarts cleanly after confirmation.`,
+                value: quality.getFpsLimit(),
                 confirmLabel: 'Apply and reload',
                 options: fpsOptions,
                 onConfirm: (limit) =>
                 {
-                    if(limit === this.game.quality.getFpsLimit())
+                    if(limit === quality.getFpsLimit())
                         return
 
-                    this.game.quality.setFpsLimit(limit, { notify: false })
-                    this.game.requestControlledReload(`Applying ${limit ? `${limit} FPS` : 'automatic frame-rate'} mode…`)
+                    quality.setFpsLimit(limit, { notify: false })
+                    this.game.requestControlledReload(`Applying ${quality.getFpsLabel(limit)} mode…`)
                 },
             })
         })
@@ -188,6 +187,7 @@ export class Options
         })
         this.game.quality.events.on('change', update)
         this.game.quality.events.on('settingsChange', update)
+        this.game.quality.events.on('deviceChange', update)
         this.game.viewport.events.on('change', update)
         update()
     }

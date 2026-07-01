@@ -35,3 +35,7 @@ The deploy ZIP works without this variable; it falls back to portable relative U
 
 - Fixed the only runtime issue found in the unified quality review: playlist quality changes are retained during a jukebox disc transition.
 - Updated the PWA cache version so installed users receive this build.
+
+## v1.13.4
+
+Adaptive display-aware FPS settings, quality-tier frame policies, stable fractional frame pacing and controlled reload loading-screen recovery.

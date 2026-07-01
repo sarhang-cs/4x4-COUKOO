@@ -93,3 +93,11 @@
 
 ## v1.13.3 — Mobile settings and quality stability
 - Confirmed Low / Medium / High selection, safer FPS and shadows reload, capability-aware device profile, sharper Medium/High distance rendering, and corrected mobile controls layout.
+
+## v1.13.4 — Adaptive FPS, display detection and reload stability
+
+- Added measured browser display-cadence detection and quality-aware FPS choices: 30, 45, 60, 90, 120 and native 120+ where available.
+- Added fractional frame pacing for stable 45 FPS operation on 60 Hz displays.
+- Kept simulation, physics, input, audio and server timing independent from the render cap.
+- Restored the startup/loading screen immediately before controlled settings reloads to avoid blank canvas transitions.
+- Refreshed the PWA cache version and Vercel HTML cache policy.

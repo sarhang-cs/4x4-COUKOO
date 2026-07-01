@@ -61,12 +61,12 @@ for(const marker of [
 }
 
 const worker = source('static/sw.js')
-if(!worker.includes('4x4-coukoo-v1.13.3'))
-    fail('Service-worker cache version was not bumped for v1.13.3')
+if(!/4x4-coukoo-v1\.13\.(?:[3-9]|\d{2,})/.test(worker))
+    fail('Service-worker cache version was not bumped for the mobile-settings release')
 
 const packageJson = JSON.parse(source('package.json'))
-if(packageJson.version !== '1.13.3')
-    fail(`Expected package version 1.13.3, found ${packageJson.version}`)
+if(!/^1\.13\.(?:[3-9]|\d{2,})$/.test(packageJson.version))
+    fail(`Expected a 1.13.3-or-later patch version, found ${packageJson.version}`)
 if(!packageJson.scripts?.['test:phase13'])
     fail('Phase 13 test script is missing')
 

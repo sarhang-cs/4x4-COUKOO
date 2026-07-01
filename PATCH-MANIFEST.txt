@@ -1,0 +1,9 @@
+4X4 COUKOO v1.13.4 — patch only
+
+Overlay this ZIP on top of the current v1.13.3 project using rsync without --delete.
+Included runtime changes:
+- measured display cadence / FPS options
+- quality-aware FPS policies
+- fractional render pacing
+- startup screen before controlled reload
+- PWA cache + Vercel HTML cache refresh

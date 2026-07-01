@@ -244,6 +244,11 @@ export class Game
         this.startupScreen?.setProgress(99)
         this.startupScreen?.hide()
 
+        // Probe the browser/display cadence after the loading work has settled.
+        // This keeps the FPS menu tied to what the current device can actually
+        // present, rather than a generic hardware guess.
+        this.quality.startFrameRateProbe({ delay: 900 })
+
         // Pre-render if quality high
         if(this.quality.level === 0 && this.rendering.renderer.backend.isWebGPUBackend)
             PreRenderer.render()
@@ -271,6 +276,9 @@ export class Game
             return
 
         this.qualityAssetReloadScheduled = true
+        // Bring back the exact same startup shell before navigation so a settings
+        // switch never exposes a blank WebGL canvas while the browser reloads.
+        this.startupScreen?.showForReload(stage)
         try
         {
             sessionStorage.setItem('4x4-coukoo-reload-stage', stage)
@@ -286,7 +294,7 @@ export class Game
             1
         )
 
-        window.setTimeout(() => window.location.reload(), 260)
+        window.setTimeout(() => window.location.reload(), 420)
     }
 
     reset()
