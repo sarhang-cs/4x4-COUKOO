@@ -84,6 +84,16 @@ export class Options
         {
             const limit = this.game.quality.getFpsLimit()
             fpsText.textContent = limit ? `${limit} FPS` : 'Auto'
+            fpsElement.setAttribute('aria-label', `Frame rate limit: ${fpsText.textContent}. Tap to change.`)
+
+            const fpsTooltip = fpsElement.querySelector('.tooltip')
+            if(fpsTooltip)
+            {
+                const options = this.game.quality.getAvailableFpsLimits()
+                    .map((value) => value ? `${value} FPS` : 'Auto')
+                    .join(' · ')
+                fpsTooltip.textContent = `Available on this device: ${options}`
+            }
 
             const shadowMode = this.game.quality.getShadowMode()
             shadowsText.textContent = shadowMode === 'auto'

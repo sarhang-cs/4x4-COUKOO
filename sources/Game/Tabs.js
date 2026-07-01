@@ -8,7 +8,7 @@ export class Tabs
         this.element = element
 
         this.setItems()
-        // this.setResize()
+        this.setResize()
     }
 
     setItems()
@@ -52,33 +52,50 @@ export class Tabs
             this.goTo(defaultItem.name)
     }
 
-    // setResize()
-    // {
-    //     this.game.viewport.events.on('throttleChange', () =>
-    //     {
-    //         this.resize()
-    //     })
+    setResize()
+    {
+        this.resize = this.resize.bind(this)
+        this.game.viewport.events.on('change', this.resize)
+        window.addEventListener('resize', this.resize, { passive: true })
 
-    //     this.resize()
-    // }
+        if('ResizeObserver' in window)
+        {
+            this.resizeObserver = new ResizeObserver(() => this.resize())
 
-    // resize()
-    // {
-    //     let height = 0
+            this.items.list.forEach((item) =>
+            {
+                if(item.innerElement)
+                    this.resizeObserver.observe(item.innerElement)
+            })
+        }
 
-    //     this.items.list.forEach((item) =>
-    //     {
-    //         const bounding = item.innerElement.getBoundingClientRect()
-            
-    //         if(bounding.height > height)
-    //             height = bounding.height
-    //     })
+        requestAnimationFrame(() => this.resize())
+    }
 
-    //     if(height > 0)
-    //     {
-    //         this.items.contentContainer.style.height = `${height}px`
-    //     }
-    // }
+    resize()
+    {
+        if(!this.items?.contentContainer)
+            return
+
+        let height = 0
+
+        if(this.items.current?.innerElement)
+        {
+            height = Math.ceil(this.items.current.innerElement.getBoundingClientRect().height)
+        }
+        else
+        {
+            this.items.list.forEach((item) =>
+            {
+                const nextHeight = Math.ceil(item.innerElement?.getBoundingClientRect().height ?? 0)
+                if(nextHeight > height)
+                    height = nextHeight
+            })
+        }
+
+        if(height > 0)
+            this.items.contentContainer.style.height = `${height}px`
+    }
 
     goTo(itemName)
     {
@@ -102,5 +119,6 @@ export class Tabs
         this.items.current = contentItem
         this.items.current.contentElement.classList.add('is-active')
         this.items.current.navigationElement.classList.add('is-active')
+        requestAnimationFrame(() => this.resize())
     }
 }

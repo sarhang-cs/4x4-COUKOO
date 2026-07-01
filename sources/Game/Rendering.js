@@ -125,6 +125,7 @@ export class Rendering
     applyQualityProfile()
     {
         const profile = this.game.quality.getProfile()
+        const lowLevel = this.game.quality.constructor.LEVELS.LOW
         this.pixelRatioLimit = profile.pixelRatioLimit
         this.pixelRatioFloor = profile.pixelRatioFloor
         this.renderScale = profile.renderScaleInitial
@@ -132,6 +133,7 @@ export class Rendering
         this.performance.slowWindows = 0
         this.performance.fastWindows = 0
         this.textureQualityDirty = true
+        this.usePostprocessing = !(this.isMobile && profile.level === lowLevel)
 
         if(this.renderer)
         {
@@ -368,7 +370,12 @@ export class Rendering
             return
 
         this.applyTextureQuality()
-        this.postProcessing.render()
+
+        if(this.usePostprocessing)
+            this.postProcessing.render()
+        else
+            this.renderer.render(this.game.scene, this.game.view.camera)
+
         if(this.stats) this.stats.update()
         if(this.game.monitoring?.stats)
         {

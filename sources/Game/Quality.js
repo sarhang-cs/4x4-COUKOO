@@ -113,10 +113,9 @@ export class Quality
         if(VALID_LEVELS.has(savedLevel))
             return savedLevel
 
-        if(this.device.isConstrained)
-            return QUALITY_LEVELS.LOW
-
-        return this.device.isMobile ? QUALITY_LEVELS.MEDIUM : QUALITY_LEVELS.HIGH
+        // First launch starts on Medium so every device opens on the balanced
+        // full-content presentation before the player decides to switch.
+        return QUALITY_LEVELS.MEDIUM
     }
 
     getLabel(level = this.level)
@@ -162,6 +161,10 @@ export class Quality
             }
         }
 
+        const lowTextureProfile = this.device.isMobile
+            ? { textureLoader: 'texture', textureExtension: 'png' }
+            : { textureLoader: 'textureKtx', textureExtension: 'ktx' }
+
         return {
             level,
             id: 'low-phase10',
@@ -169,10 +172,12 @@ export class Quality
             musicFormat: 'mp3',
             musicPath: 'sounds/musics',
             modelSuffix: '-compressed',
-            textureLoader: 'textureKtx',
-            textureExtension: 'ktx',
+            // Keep the Phase 10 lightweight model set, but use the stable PNG
+            // texture path on phones to avoid intermittent black flashing while
+            // some mobile browsers transcode KTX textures.
+            ...lowTextureProfile,
             compressedAssets: true,
-            description: 'Phase 10 optimized: the lightweight mobile profile with the same gameplay, save, missions, weather, season, and accessibility systems.',
+            description: 'Phase 10 optimized: the lightweight mobile profile with the same gameplay, save, missions, weather, season, and accessibility systems, now tuned for better stability on phones.',
         }
     }
 
@@ -208,7 +213,22 @@ export class Quality
     getFpsLimit()
     {
         const saved = Number(this.game.save.get('settings.fpsLimit', 0))
-        return VALID_FPS_LIMITS.has(saved) ? saved : 0
+        const allowed = this.getAvailableFpsLimits()
+
+        if(allowed.includes(saved))
+            return saved
+
+        if(saved === 60 && !allowed.includes(60))
+            return 30
+
+        return 0
+    }
+
+    getAvailableFpsLimits()
+    {
+        return this.device.isMobile
+            ? [ 0, 30 ]
+            : [ 0, 60, 30 ]
     }
 
     getProfile(level = this.level)
@@ -251,29 +271,29 @@ export class Quality
             return {
                 level,
                 name: 'Medium',
-                pixelRatioLimit: isMobile ? (isConstrained ? 1 : 1.15) : 1.45,
-                pixelRatioFloor: isMobile ? 0.62 : 0.82,
-                renderScaleInitial: 1,
-                renderScaleMin: isMobile ? 0.68 : 0.8,
-                renderScaleMax: isMobile ? 1.05 : 1.2,
-                maxRenderPixels: isMobile ? (isConstrained ? 1500000 : 2100000) : 4300000,
+                pixelRatioLimit: isMobile ? (isConstrained ? 1.05 : 1.2) : 1.45,
+                pixelRatioFloor: isMobile ? 0.68 : 0.82,
+                renderScaleInitial: isMobile ? 1.03 : 1,
+                renderScaleMin: isMobile ? 0.74 : 0.8,
+                renderScaleMax: isMobile ? 1.08 : 1.2,
+                maxRenderPixels: isMobile ? (isConstrained ? 1800000 : 2500000) : 4300000,
                 adaptiveResolution: true,
-                targetFrameTime: isMobile ? 22 : 19,
-                bloomMips: isMobile ? 2 : 4,
-                bloomStrength: isMobile ? 0.2 : 0.3,
-                bloomThreshold: 0.98,
-                bloomSmoothWidth: 0.76,
-                bloomRadius: 0.52,
+                targetFrameTime: isMobile ? 21 : 19,
+                bloomMips: isMobile ? 3 : 4,
+                bloomStrength: isMobile ? 0.24 : 0.3,
+                bloomThreshold: 0.94,
+                bloomSmoothWidth: 0.8,
+                bloomRadius: 0.56,
                 depthOfField: false,
                 dofRepeats: 18,
                 dofAmount: 0.002,
                 dofStart: 0.21,
                 dofEnd: 0.51,
-                shadowMapSize: isMobile ? 512 : 1024,
-                shadowRadius: isMobile ? 1.8 : 2.6,
+                shadowMapSize: isMobile ? 1024 : 1024,
+                shadowRadius: isMobile ? 2.1 : 2.6,
                 shadowsEnabled: true,
-                textureAnisotropy: isMobile ? 2 : 6,
-                toneMappingExposure: 1.02,
+                textureAnisotropy: isMobile ? 4 : 6,
+                toneMappingExposure: 1.04,
             }
         }
 
@@ -282,29 +302,29 @@ export class Quality
             return {
                 level,
                 name: 'High',
-                pixelRatioLimit: isConstrained ? 1.05 : 1.3,
-                pixelRatioFloor: isConstrained ? 0.65 : 0.72,
-                renderScaleInitial: 1,
-                renderScaleMin: isConstrained ? 0.72 : 0.78,
-                renderScaleMax: 1,
-                maxRenderPixels: isConstrained ? 1800000 : 2600000,
+                pixelRatioLimit: isConstrained ? 1.18 : 1.45,
+                pixelRatioFloor: isConstrained ? 0.78 : 0.9,
+                renderScaleInitial: isConstrained ? 1.06 : 1.12,
+                renderScaleMin: isConstrained ? 0.86 : 0.92,
+                renderScaleMax: isConstrained ? 1.16 : 1.25,
+                maxRenderPixels: isConstrained ? 2600000 : 4200000,
                 adaptiveResolution: true,
-                targetFrameTime: isConstrained ? 23 : 20,
-                bloomMips: isConstrained ? 2 : 3,
-                bloomStrength: 0.28,
-                bloomThreshold: 0.94,
-                bloomSmoothWidth: 0.82,
-                bloomRadius: 0.58,
-                depthOfField: !isConstrained,
-                dofRepeats: isConstrained ? 14 : 20,
-                dofAmount: 0.0025,
-                dofStart: 0.2,
-                dofEnd: 0.5,
-                shadowMapSize: isConstrained ? 512 : 1024,
-                shadowRadius: 2.1,
+                targetFrameTime: isConstrained ? 21.5 : 18.5,
+                bloomMips: isConstrained ? 3 : 4,
+                bloomStrength: isConstrained ? 0.32 : 0.38,
+                bloomThreshold: 0.9,
+                bloomSmoothWidth: 0.86,
+                bloomRadius: 0.64,
+                depthOfField: true,
+                dofRepeats: isConstrained ? 20 : 28,
+                dofAmount: isConstrained ? 0.0028 : 0.0032,
+                dofStart: 0.18,
+                dofEnd: 0.52,
+                shadowMapSize: isConstrained ? 1024 : 2048,
+                shadowRadius: isConstrained ? 2.6 : 3,
                 shadowsEnabled: true,
-                textureAnisotropy: isConstrained ? 2 : 4,
-                toneMappingExposure: 1.02,
+                textureAnisotropy: isConstrained ? 4 : 8,
+                toneMappingExposure: 1.08,
             }
         }
 
@@ -433,7 +453,9 @@ export class Quality
 
     setFpsLimit(limit = 0)
     {
-        const nextLimit = VALID_FPS_LIMITS.has(Number(limit)) ? Number(limit) : 0
+        const allowed = this.getAvailableFpsLimits()
+        const numericLimit = Number(limit)
+        const nextLimit = allowed.includes(numericLimit) ? numericLimit : allowed[0]
         if(nextLimit === this.getFpsLimit())
             return
 
@@ -443,7 +465,7 @@ export class Quality
 
     cycleFpsLimit()
     {
-        const order = [ 0, 60, 30 ]
+        const order = this.getAvailableFpsLimits()
         const currentIndex = order.indexOf(this.getFpsLimit())
         this.setFpsLimit(order[(currentIndex + 1) % order.length])
     }

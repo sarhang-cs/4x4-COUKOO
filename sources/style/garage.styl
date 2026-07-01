@@ -2,18 +2,19 @@
     display none
     position absolute
     z-index 9
-    top 20px
-    right 56px
+    top 18px
+    left 18px
     align-items center
-    gap 7px
-    min-width 72px
-    height 32px
-    padding 0 10px
-    border 1px solid alpha(#ffffff, 0.42)
-    border-radius 16px
-    background alpha(#251f2b, 0.8)
-    color #ffffff
-    font-size 13px
+    gap 8px
+    min-width 86px
+    height 38px
+    padding 0 12px
+    border 1px solid alpha(#fff2c4, 0.42)
+    border-radius 999px
+    background linear-gradient(135deg, alpha(#2a1b2c, 0.94), alpha(#5a2436, 0.88))
+    box-shadow 0 10px 24px alpha(#000000, 0.28), 0 0 0 1px alpha(#ffffff, 0.06) inset
+    color #fff2d0
+    font-size 14px
     font-weight 900
     pointer-events none
     -webkit-user-select none
@@ -33,12 +34,13 @@
         display flex
         align-items center
         justify-content center
-        width 17px
-        height 17px
+        width 20px
+        height 20px
         border-radius 50%
-        background linear-gradient(135deg, #ffc864, #f28c22)
+        background radial-gradient(circle at 30% 30%, #ffe8a2, #ffc864 45%, #f28c22 100%)
         color #4b1b1d
         font-size 11px
+        box-shadow 0 0 0 2px alpha(#2e1820, 0.42)
 
 .menu
     .garage-preview
@@ -283,7 +285,7 @@
 @media only screen and (max-width 520px)
     .coukoo-coins
         top 76px
-        right 54px
+        left 12px
 
     .menu .garage-content .garage-header
         flex-direction column

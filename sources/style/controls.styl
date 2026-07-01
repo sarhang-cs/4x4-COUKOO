@@ -1,30 +1,58 @@
 .menu .contents .controls-content
+    .content-inner
+        display flex
+        flex-direction column
+
+    .tabs
+        display flex
+        flex-direction column
+        gap 14px
+
+    .tabs-content
+        min-height 280px
+        transition height 0.2s ease
+
+    .tabs-content-item
+        align-items flex-start
+
     .list
         display flex
-        align-items center
+        align-items flex-start
         justify-content center
-        white-space nowrap
-        
+        width 100%
+        white-space normal
+
         table
+            width 100%
+            max-width 100%
             border-spacing 0 10px
 
             @media only screen and (max-height 620px)
-                border-spacing 0 5px
+                border-spacing 0 6px
 
             @media only screen and (max-height 540px)
-                border-spacing 0 0
+                border-spacing 0 2px
 
-        tr
-            td:first-child
+        td
+            vertical-align top
+            line-height 1.4
+
+            &:first-child
+                width 45%
                 text-align right
                 padding-right 15px
 
+            &:last-child
+                width 55%
+
         .key
             display inline-block
-            padding 0 4px
+            margin 1px 2px
+            padding 2px 6px
             border 1px solid #ffffff33
-            border-radius 4px
+            border-radius 6px
             font-weight 700
+            background alpha(#ffffff, 0.04)
 
         .is-gamepad-button
             display none
@@ -33,7 +61,7 @@
                 transform scale(0.8, 0.8)
 
             @media only screen and (max-width 440px)
-                transform scale(0.7, 0.7)
+                transform scale(0.72, 0.72)
 
             &.is-playstation
                 .is-gamepad-default &
@@ -67,4 +95,42 @@
                     width 14px
                     height 13px
                     background-image url('/ui/controls/gamepad-cross.webp')
-        
+
+    .tutorial-replay-row
+        display flex
+        justify-content center
+        margin-top 18px
+
+    .tutorial-replay
+        width min(100%, 280px)
+
+    @media only screen and (max-width 520px)
+        .tabs
+            gap 12px
+
+        .tabs-content
+            min-height 250px
+
+        .list
+            font-size 14px
+
+            td
+                &:first-child
+                    width 46%
+                    padding-right 10px
+
+            .key
+                padding 2px 5px
+                font-size 0.9em
+
+    @media only screen and (max-width 440px)
+        .tabs-content
+            min-height 230px
+
+        .list
+            font-size 13px
+
+            td
+                &:first-child
+                    width 48%
+                    padding-right 8px

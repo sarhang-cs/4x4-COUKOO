@@ -65,9 +65,40 @@
 
     @media (max-width: 480px)
         table
+            width 100%
+            border-spacing 0 8px
+
+            tbody
+                display block
+
+            tr
+                display block
+                padding 10px 12px
+                border 1px solid alpha(#ffffff, 0.12)
+                border-radius 12px
+                background alpha(#ffffff, 0.03)
+
             td:first-child
-                padding-right 14px
+                display block
+                width auto
+                padding-right 0
+                padding-bottom 8px
+
+            td:last-child
+                display block
+                width auto
+
+        .button
+            min-height 42px
+
+        .save-status
+            min-width 0
 
         .volume-control
             grid-template-columns minmax(86px, 1fr) 38px
             gap 7px
+
+    @media (max-width: 380px)
+        table
+            tr
+                padding 9px 10px
