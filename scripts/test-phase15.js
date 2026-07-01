@@ -58,12 +58,12 @@ if(!save.includes('fpsLimit: -1') || !save.includes('[ -1, 30, 45, 60, 90, 120, 
     fail('Auto FPS save migration is missing')
 
 const worker = source('static/sw.js')
-if(!worker.includes('4x4-coukoo-v1.13.5'))
-    fail('Service-worker cache version was not bumped for v1.13.5')
+if(!/4x4-coukoo-v1\.13\.(?:[5-9]|\d{2,})/.test(worker))
+    fail('Service-worker cache version was not bumped for v1.13.5-or-later')
 
 const packageJson = JSON.parse(source('package.json'))
-if(packageJson.version !== '1.13.5')
-    fail(`Expected package version 1.13.5, found ${packageJson.version}`)
+if(!/^1\.13\.(?:[5-9]|\d{2,})$/.test(packageJson.version))
+    fail(`Expected package version 1.13.5-or-later, found ${packageJson.version}`)
 if(!packageJson.scripts?.['test:phase15'])
     fail('Phase 15 test script is missing')
 

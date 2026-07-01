@@ -33,7 +33,7 @@ check(/new SocialShare\(\)/.test(game), 'Game does not initialize score sharing'
 check(/new ControllerStatus\(\)/.test(game), 'Game does not initialize controller status UX')
 check(/progress\.dailyReward/.test(save), 'Daily reward state is not persisted')
 check(/progress\.circuit/.test(save), 'Circuit personal best state is not persisted')
-check(/SAVE_VERSION = 4/.test(save), 'Save schema was not migrated to version 4')
+check(/SAVE_VERSION = [4-9]/.test(save), 'Save schema was not migrated to version 4 or later')
 check(/js-daily-reward/.test(html) && /js-daily-claim/.test(html), 'Daily reward Garage UI is missing')
 check(/js-button-share/.test(html) && /js-circuit-personal-best/.test(html), 'Circuit sharing or personal-best UI is missing')
 check(/js-controller-status/.test(html), 'Controller status UI is missing')

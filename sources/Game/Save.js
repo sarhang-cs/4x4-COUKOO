@@ -1,7 +1,7 @@
 import { Events } from './Events.js'
 
 const STORAGE_KEY = '4x4-coukoo-save-v1'
-const SAVE_VERSION = 4
+const SAVE_VERSION = 5
 
 const now = () => Date.now()
 
@@ -44,6 +44,8 @@ const toUnitInterval = (value, fallback = 1) =>
 
 const toShadowMode = (value) => [ 'auto', 'on', 'off' ].includes(value) ? value : 'auto'
 const toVisualEffectsMode = (value) => [ 'auto', 'on', 'off' ].includes(value) ? value : 'auto'
+const toSeasonMode = (value) => [ 'auto', 'spring', 'summer', 'autumn', 'winter' ].includes(value) ? value : 'auto'
+const toWeatherMode = (value) => [ 'auto', 'clear', 'rain', 'storm', 'snow' ].includes(value) ? value : 'auto'
 
 const toFpsLimit = (value) =>
 {
@@ -140,6 +142,8 @@ export class Save
                 fpsLimit: -1,
                 vibration: true,
                 visualEffects: 'auto',
+                seasonMode: 'auto',
+                weatherMode: 'auto',
                 countryCode: 'ku',
             },
             progress: {
@@ -214,6 +218,8 @@ export class Save
         normalized.settings.fpsLimit = toFpsLimit(normalized.settings.fpsLimit)
         normalized.settings.vibration = normalized.settings.vibration !== false
         normalized.settings.visualEffects = toVisualEffectsMode(normalized.settings.visualEffects)
+        normalized.settings.seasonMode = toSeasonMode(normalized.settings.seasonMode)
+        normalized.settings.weatherMode = toWeatherMode(normalized.settings.weatherMode)
         normalized.settings.countryCode = typeof normalized.settings.countryCode === 'string' && normalized.settings.countryCode.trim()
             ? normalized.settings.countryCode.trim().toLowerCase().slice(0, 8)
             : defaults.settings.countryCode

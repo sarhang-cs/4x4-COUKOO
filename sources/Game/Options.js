@@ -11,6 +11,7 @@ export class Options
         this.setSound()
         this.setQuality()
         this.setPerformance()
+        this.setEnvironment()
         this.setDeviceProfile()
         this.setVisualEffects()
         this.setVibration()
@@ -193,6 +194,84 @@ export class Options
         this.game.quality.events.on('settingsChange', update)
         this.game.quality.events.on('deviceChange', update)
         this.game.viewport.events.on('change', update)
+        update()
+    }
+
+    setEnvironment()
+    {
+        const seasonElement = this.element.querySelector('.js-season-toggle')
+        const weatherElement = this.element.querySelector('.js-weather-toggle')
+        if(!seasonElement || !weatherElement || !this.game.weather)
+            return
+
+        const seasonText = seasonElement.querySelector('span')
+        const weatherText = weatherElement.querySelector('span')
+        const seasonTooltip = seasonElement.querySelector('.tooltip')
+        const weatherTooltip = weatherElement.querySelector('.tooltip')
+
+        const update = () =>
+        {
+            const weather = this.game.weather
+            const details = weather.getSeasonDetails()
+            seasonText.textContent = weather.getSeasonLabel()
+            weatherText.textContent = weather.getWeatherLabel()
+            seasonElement.setAttribute('aria-label', `Season: ${seasonText.textContent}. Tap to choose.`)
+            weatherElement.setAttribute('aria-label', `Weather: ${weatherText.textContent}. Tap to choose.`)
+
+            if(seasonTooltip)
+            {
+                seasonTooltip.textContent = details.automatic
+                    ? 'Auto rotates spring, summer, autumn and winter every 12 minutes. You can lock any season for a live preview.'
+                    : 'This season is locked until you choose Auto again.'
+            }
+
+            if(weatherTooltip)
+            {
+                weatherTooltip.textContent = weather.getWeatherMode() === 'auto'
+                    ? 'Auto uses the active season to drive real rain, snow, cloud, wind and thunder conditions.'
+                    : 'This weather preset is live now: rain, particles, storm flashes, thunder and ground strikes use the selected condition.'
+            }
+        }
+
+        seasonElement.addEventListener('click', () =>
+        {
+            const weather = this.game.weather
+            this.openSettingsPicker({
+                title: 'Choose season',
+                description: 'Auto changes through a complete game year in 12 minutes. Locked seasons change foliage color, temperature, clouds, rain and snow immediately.',
+                value: weather.getSeasonMode(),
+                confirmLabel: 'Apply season',
+                options: [
+                    { value: 'auto', title: 'Auto', description: `Current: ${weather.getSeasonDetails().label}. Rotates all four seasons while you drive.` },
+                    { value: 'spring', title: 'Spring', description: 'Fresh foliage colors, mild temperatures and more rain opportunities.' },
+                    { value: 'summer', title: 'Summer', description: 'Warm, brighter conditions with clearer skies.' },
+                    { value: 'autumn', title: 'Autumn', description: 'Orange foliage, stronger wind and a wetter atmosphere.' },
+                    { value: 'winter', title: 'Winter', description: 'Cold conditions where rain turns into snow.' },
+                ],
+                onConfirm: (mode) => weather.setSeasonMode(mode),
+            })
+        })
+
+        weatherElement.addEventListener('click', () =>
+        {
+            const weather = this.game.weather
+            this.openSettingsPicker({
+                title: 'Choose weather',
+                description: 'Every choice drives the real 3D rain/snow particles, wind, clouds, rain audio, lightning visuals and thunder. Storm can strike the ground near the vehicle.',
+                value: weather.getWeatherMode(),
+                confirmLabel: 'Apply weather',
+                options: [
+                    { value: 'auto', title: 'Auto', description: `Current condition: ${weather.getAutoWeatherLabel()}. Uses the selected season and day cycle.` },
+                    { value: 'clear', title: 'Clear', description: 'Dry sky, light wind and no precipitation.' },
+                    { value: 'rain', title: 'Rain', description: 'Visible rain particles, wet atmosphere and rain sound.' },
+                    { value: 'storm', title: 'Storm', description: 'Heavy rain, thunder, electric flashes and real lightning strikes.' },
+                    { value: 'snow', title: 'Snow', description: 'Cold snowfall with snow particles and accumulation effects.' },
+                ],
+                onConfirm: (mode) => weather.setWeatherMode(mode),
+            })
+        })
+
+        this.game.weather.events.on('environmentChange', update)
         update()
     }
 

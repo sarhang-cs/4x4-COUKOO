@@ -224,6 +224,11 @@ export class Lighting
 
         // Apply day cycles values
         this.colorUniform.value.copy(this.game.dayCycles.properties.lightColor.value)
-        this.intensityUniform.value = this.game.dayCycles.properties.lightIntensity.value
+        const rain = Math.max(0, Math.min(1, this.game.weather?.rain?.value ?? 0))
+        const clouds = Math.max(0, Math.min(1, this.game.weather?.clouds?.value ?? 0))
+        const electric = Math.max(0, Math.min(1, this.game.weather?.electricField?.value ?? 0))
+        const stormFlicker = electric * rain * Math.max(0, Math.sin(this.game.ticker.elapsed * 17)) * 0.48
+        const weatherDim = 1 - clouds * 0.16 - rain * 0.2
+        this.intensityUniform.value = this.game.dayCycles.properties.lightIntensity.value * weatherDim + stormFlicker
     }
 }

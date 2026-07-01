@@ -40,7 +40,13 @@ export class Lightnings
             { label: 'hitChances', min: 0, max: 1, step: 0.001 },
             () =>
             {
-                return Math.max(0, this.game.weather.clouds.value) * Math.max(0, this.game.weather.electricField.value) * this.game.weather.humidity.value
+                // A storm should visibly strike the ground, but a 1.0 chance
+                // would create an explosion every second. Keep the live weather
+                // inputs and turn them into a readable, safe strike rate.
+                const intensity = Math.max(0, this.game.weather.clouds.value)
+                    * Math.max(0, this.game.weather.electricField.value)
+                    * this.game.weather.humidity.value
+                return Math.min(0.16, intensity * 0.16)
             }
         )
 

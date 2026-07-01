@@ -276,7 +276,8 @@ export class Leaves
     setMesh()
     {
         this.mesh = new THREE.Mesh(this.geometry, this.material)
-        this.mesh.count = this.count
+        this.maxCount = this.count
+        this.mesh.count = this.maxCount
         this.mesh.frustumCulled = false
         this.mesh.castShadow = true
         this.mesh.receiveShadow = true
@@ -294,6 +295,17 @@ export class Leaves
 
     update()
     {
+        // Autumn visibly carries more falling leaves, while spring/summer stay
+        // calm and winter retains a light amount of wind-blown debris.
+        const season = this.game.weather?.getSeasonKey?.() ?? 'summer'
+        const seasonalRatio = {
+            spring: 0.1,
+            summer: 0.06,
+            autumn: 1,
+            winter: 0.22,
+        }[season] ?? 0.1
+        this.mesh.count = Math.max(1, Math.round(this.maxCount * seasonalRatio))
+
         this.focusPoint.value.set(this.game.view.optimalArea.position.x, this.game.view.optimalArea.position.z)
 
         this.vehicleVelocity.value.copy(this.game.physicalVehicle.velocity)

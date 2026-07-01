@@ -22,11 +22,18 @@ export class Trees
         this.references = references
         this.colorA = colorA
         this.colorB = colorB
+        this.baseColorA = new THREE.Color(colorA)
+        this.baseColorB = new THREE.Color(colorB)
+        this.seasonColorA = new THREE.Color()
+        this.seasonColorB = new THREE.Color()
+        this.lastSeasonKey = null
 
         this.setModelParts()
         this.setBodies()
         this.setLeaves()
         this.setPhysical()
+
+        this.game.ticker.events.on('tick', () => this.updateSeason(), 11)
     }
 
     setModelParts()
@@ -81,15 +88,15 @@ export class Trees
             }
         }
 
-        const leavesColorANode = uniform(color(this.colorA))
-        const leavesColorBNode = uniform(color(this.colorB))
-        this.leaves = new Foliage(references, leavesColorANode, leavesColorBNode, true)
+        this.leavesColorANode = uniform(color(this.colorA))
+        this.leavesColorBNode = uniform(color(this.colorB))
+        this.leaves = new Foliage(references, this.leavesColorANode, this.leavesColorBNode, true)
 
         // Debug
         if(this.game.debug.active)
         {
-            this.game.debug.addThreeColorBinding(this.debugPanel, leavesColorANode.value, 'leavesColorA')
-            this.game.debug.addThreeColorBinding(this.debugPanel, leavesColorBNode.value, 'leavesColorB')
+            this.game.debug.addThreeColorBinding(this.debugPanel, this.leavesColorANode.value, 'leavesColorA')
+            this.game.debug.addThreeColorBinding(this.debugPanel, this.leavesColorBNode.value, 'leavesColorB')
             this.debugPanel.addBinding(this.leaves.material.shadowOffset, 'value', { label: 'shadowOffset', min: 0, max: 2, step: 0.001 })
             this.debugPanel.addBinding(this.leaves.material.threshold, 'value', { label: 'threshold', min: 0, max: 1, step: 0.001 })
             this.debugPanel.addBinding(this.leaves.material.seeThroughEdgeMin, 'value', { label: 'seeThroughEdgeMin', min: 0, max: 1, step: 0.001 })
@@ -117,5 +124,26 @@ export class Trees
                 }
             )
         }
+    }
+
+    updateSeason()
+    {
+        const season = this.game.weather?.getSeasonKey?.() ?? 'summer'
+        if(season === this.lastSeasonKey)
+            return
+
+        this.lastSeasonKey = season
+
+        const profile = {
+            spring: { colorA: '#8fd95a', colorB: '#d7f08b', strength: 0.32 },
+            summer: { colorA: '#d3ca3f', colorB: '#d9e374', strength: 0.08 },
+            autumn: { colorA: '#d3542d', colorB: '#f3a23d', strength: 0.78 },
+            winter: { colorA: '#b7c7d4', colorB: '#e2e7ef', strength: 0.72 },
+        }[season] ?? { colorA: '#d3ca3f', colorB: '#d9e374', strength: 0.08 }
+
+        this.seasonColorA.set(profile.colorA)
+        this.seasonColorB.set(profile.colorB)
+        this.leavesColorANode.value.copy(this.baseColorA).lerp(this.seasonColorA, profile.strength)
+        this.leavesColorBNode.value.copy(this.baseColorB).lerp(this.seasonColorB, profile.strength)
     }
 }

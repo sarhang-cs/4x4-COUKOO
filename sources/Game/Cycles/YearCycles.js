@@ -6,7 +6,11 @@ export class YearCycles extends Cycles
     constructor()
     {
         const forcedProgress = import.meta.env.VITE_YEAR_CYCLE_PROGRESS ? parseFloat(import.meta.env.VITE_YEAR_CYCLE_PROGRESS) : null
-        super('🕜 Year Cycles', 60 * 60 * 24 * 365, forcedProgress, false)
+        // A real 365-day duration made the seasonal content effectively invisible
+        // during normal play. One complete in-game year now takes 12 minutes,
+        // giving every season roughly three minutes while manual selection can
+        // still lock a season instantly from Settings.
+        super('🕜 Year Cycles', 12 * 60, forcedProgress, false)
     }
 
     getKeyframesDescriptions()

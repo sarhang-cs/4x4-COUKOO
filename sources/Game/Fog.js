@@ -47,11 +47,15 @@ export class Fog
         const visibilityMultiplier = Number(profile.visibilityMultiplier ?? 1) * (framePolicy.targetFps >= 120 ? 0.96 : framePolicy.targetFps >= 90 ? 0.98 : 1)
         const baseNear = this.game.view.optimalArea.nearDistance + this.game.dayCycles.properties.fogNearRatio.value * amplitude
         const baseFar = this.game.view.optimalArea.nearDistance + this.game.dayCycles.properties.fogFarRatio.value * amplitude
+        const rain = Math.max(0, Math.min(1, this.game.weather?.rain?.value ?? 0))
+        const electric = Math.max(0, Math.min(1, this.game.weather?.electricField?.value ?? 0))
+        const stormDensity = rain * (0.14 + electric * 0.16)
+        const weatherVisibility = Math.max(0.58, 1 - rain * 0.18 - stormDensity)
         this.colorA.value.copy(this.game.dayCycles.properties.fogColorA.value)
         this.colorB.value.copy(this.game.dayCycles.properties.fogColorB.value)
-        this.near.value = baseNear
+        this.near.value = baseNear + amplitude * stormDensity * 0.08
         // Medium and High keep a longer readable view of the world while Low
         // retains its smaller fill-rate budget.
-        this.far.value = baseNear + Math.max(1, baseFar - baseNear) * visibilityMultiplier
+        this.far.value = baseNear + Math.max(1, baseFar - baseNear) * visibilityMultiplier * weatherVisibility
     }
 }

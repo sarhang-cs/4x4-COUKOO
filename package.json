@@ -1,6 +1,6 @@
 {
   "name": "4x4-coukoo",
-  "version": "1.13.5",
+  "version": "1.13.6",
   "type": "module",
   "scripts": {
     "dev": "vite --mode development",
@@ -9,7 +9,7 @@
     "clean": "rm -rf dist",
     "verify": "node scripts/verify-project.js",
     "test:phase1": "node scripts/test-phase1.js",
-    "test": "npm run test:phase1 && npm run test:phase2 && npm run test:phase3 && npm run test:phase4 && npm run test:phase5 && npm run test:phase6 && npm run test:phase7 && npm run test:phase8 && npm run test:phase9 && npm run test:phase10 && npm run test:phase11 && npm run test:phase12 && npm run test:phase13 && npm run test:phase14 && npm run test:phase15",
+    "test": "npm run test:phase1 && npm run test:phase2 && npm run test:phase3 && npm run test:phase4 && npm run test:phase5 && npm run test:phase6 && npm run test:phase7 && npm run test:phase8 && npm run test:phase9 && npm run test:phase10 && npm run test:phase11 && npm run test:phase12 && npm run test:phase13 && npm run test:phase14 && npm run test:phase15 && npm run test:phase16",
     "postinstall": "node scripts/patch-three-webgl-ubo-capacity.js",
     "release-check": "npm run verify && npm run build && node scripts/release-audit.js",
     "test:phase2": "node scripts/test-phase2.js",
@@ -25,7 +25,8 @@
     "test:phase12": "node scripts/test-phase12.js",
     "test:phase13": "node scripts/test-phase13.js",
     "test:phase14": "node scripts/test-phase14.js",
-    "test:phase15": "node scripts/test-phase15.js"
+    "test:phase15": "node scripts/test-phase15.js",
+    "test:phase16": "node scripts/test-phase16.js"
   },
   "author": "Sarhang Salah <sarhang.pasha123@gmail.com> (SARHANG IO)",
   "license": "MIT",

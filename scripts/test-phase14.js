@@ -68,12 +68,12 @@ if(!startup.includes('showForReload(stage'))
     fail('Startup screen reload transition is missing')
 
 const worker = source('static/sw.js')
-if(!worker.includes('4x4-coukoo-v1.13.5'))
-    fail('Service-worker cache version was not bumped for v1.13.5')
+if(!/4x4-coukoo-v1\.13\.(?:[5-9]|\d{2,})/.test(worker))
+    fail('Service-worker cache version was not bumped for v1.13.5-or-later')
 
 const packageJson = JSON.parse(source('package.json'))
-if(packageJson.version !== '1.13.5')
-    fail(`Expected package version 1.13.5, found ${packageJson.version}`)
+if(!/^1\.13\.(?:[5-9]|\d{2,})$/.test(packageJson.version))
+    fail(`Expected package version 1.13.5-or-later, found ${packageJson.version}`)
 if(!packageJson.scripts?.['test:phase14'])
     fail('Phase 14 test script is missing')
 

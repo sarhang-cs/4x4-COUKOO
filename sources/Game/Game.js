@@ -139,7 +139,6 @@ export class Game
         this.startupScreen?.setStage('Building the driving world')
         this.startupScreen?.setProgress(31)
         this.visualEffects = new VisualEffects()
-        this.options = new Options()
         this.respawns = new Respawns(import.meta.env.VITE_PLAYER_SPAWN || 'landing')
         this.view = new View()
         this.rendering.setPostprocessing()
@@ -147,6 +146,9 @@ export class Game
         this.reveal = new Reveal()
         this.noises = new Noises()
         this.weather = new Weather()
+        // Options needs the weather/environment controller so the Season and
+        // Weather controls always reflect live data instead of an empty shell.
+        this.options = new Options()
         this.wind = new Wind()
         this.tracks = new Tracks()
         this.lighting = new Lighting()
