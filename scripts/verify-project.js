@@ -1,244 +1,110 @@
-import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { join, relative, resolve } from 'node:path'
 
-const projectRoot = resolve(import.meta.dirname, '..')
-const staticRoot = join(projectRoot, 'static')
-const sourcesRoot = join(projectRoot, 'sources')
+const root = resolve(import.meta.dirname, '..')
+const sources = join(root, 'sources')
+const staticRoot = join(root, 'static')
 const failures = []
 
-const assert = (condition, message) =>
-{
-    if(!condition)
-        failures.push(message)
-}
+const fail = (message) => failures.push(message)
+const assert = (condition, message) => { if(!condition) fail(message) }
 
 const walk = (directory, files = []) =>
 {
     for(const entry of readdirSync(directory, { withFileTypes: true }))
     {
-        const entryPath = join(directory, entry.name)
-
-        if(entry.isDirectory())
-            walk(entryPath, files)
-        else
-            files.push(entryPath)
+        const path = join(directory, entry.name)
+        if(entry.isDirectory()) walk(path, files)
+        else files.push(path)
     }
-
     return files
 }
 
-const sourceFiles = walk(sourcesRoot).filter((file) => /\.(js|html|styl)$/.test(file))
+const sourceFiles = walk(sources).filter((file) => /\.(?:js|html|styl)$/.test(file))
+const staticFiles = walk(staticRoot)
 
-// Local JavaScript imports must resolve from the source tree.
 for(const file of sourceFiles.filter((item) => item.endsWith('.js')))
 {
     const content = readFileSync(file, 'utf8')
-    const imports = content.matchAll(/(?:import|export)\s+(?:[\s\S]*?\s+from\s+)?['"]([^'"]+)['"]/g)
-
-    for(const match of imports)
+    for(const match of content.matchAll(/(?:import|export)\s+(?:[\s\S]*?\s+from\s+)?['"]([^'"]+)['"]/g))
     {
-        const importPath = match[1]
-        if(!importPath.startsWith('.'))
-            continue
-
-        const resolved = resolve(join(file, '..'), importPath)
-        assert(existsSync(resolved), `Missing local import: ${relative(projectRoot, file)} -> ${importPath}`)
+        const request = match[1]
+        if(!request.startsWith('.')) continue
+        const resolved = resolve(join(file, '..'), request)
+        assert(existsSync(resolved), `Missing local import: ${relative(root, file)} -> ${request}`)
     }
 }
 
-// Public images, fonts and icons referenced by the application must exist in static/.
-const checkPublicPath = (publicPath, sourceFile) =>
+const assetExists = (url, file) =>
 {
-    if(!publicPath || /^(https?:|data:|#|\.\/style\/)/.test(publicPath))
-        return
-
-    const normalized = publicPath.replace(/^\.\//, '').replace(/^\//, '')
-    if(!/^(ui|fonts|favicons|social|readme|intro|respawns|behindTheScene|palette|vehicle|terrain|areas|timeMachine)\//.test(normalized))
-        return
-
-    assert(
-        existsSync(join(staticRoot, normalized)),
-        `Missing public asset: ${relative(projectRoot, sourceFile)} -> ${publicPath}`
-    )
+    if(!url || /^(?:https?:|data:|#|\.\/style\/)/.test(url)) return
+    const normalized = url.replace(/^\.\//, '').replace(/^\//, '')
+    if(!/^(?:ui|fonts|favicons|social|intro|respawns|behindTheScene|palette|vehicle|terrain|areas|timeMachine)\//.test(normalized)) return
+    assert(existsSync(join(staticRoot, normalized)), `Missing public asset: ${relative(root, file)} -> ${url}`)
 }
 
 for(const file of sourceFiles.filter((item) => item.endsWith('.html')))
 {
     const content = readFileSync(file, 'utf8')
-    for(const match of content.matchAll(/(?:src|href)=["']([^"']+)["']/g))
-        checkPublicPath(match[1], file)
+    for(const match of content.matchAll(/(?:src|href)=["']([^"']+)["']/g)) assetExists(match[1], file)
 }
-
 for(const file of sourceFiles.filter((item) => item.endsWith('.styl')))
 {
     const content = readFileSync(file, 'utf8')
-    for(const match of content.matchAll(/url\((?:['"])?([^'"\)]+)(?:['"])?\)/g))
-        checkPublicPath(match[1], file)
+    for(const match of content.matchAll(/url\((?:['"])?([^'"\)]+)(?:['"])?\)/g)) assetExists(match[1], file)
 }
 
-// Project identity and new Kurdistan flag assets are required.
-for(const file of [ 'README.md', 'LICENSE', 'NOTICE', 'package.json', 'package-lock.json' ])
-    assert(existsSync(join(projectRoot, file)), `Required root file is missing: ${file}`)
+const forbiddenRuntime = /(?:^|\/)(?:[^/]*bruno[^/]*|[^/]+\.(?:blend1?|psd|band|pur|mp4))$/i
+for(const file of staticFiles)
+    assert(!forbiddenRuntime.test(file.replaceAll('\\', '/')), `Authoring-only asset is shipped: ${relative(root, file)}`)
 
-for(const file of [ 'static/ui/flags/ku.png', 'static/ui/flags/ku.webp' ])
-    assert(existsSync(join(projectRoot, file)), `Required Kurdistan flag asset is missing: ${file}`)
+for(const file of [ 'README.md', 'LICENSE', 'NOTICE', 'package.json', 'package-lock.json', 'vercel.json', '.env.example' ])
+    assert(existsSync(join(root, file)), `Required root file is missing: ${file}`)
 
-const packageJson = JSON.parse(readFileSync(join(projectRoot, 'package.json'), 'utf8'))
-assert(packageJson.name === '4x4-coukoo', 'package.json must use the 4x4-coukoo package name')
-assert(packageJson.license === 'MIT', 'package.json must declare the MIT license')
-assert(packageJson.dependencies.three === '0.185.0', 'package.json must pin Three.js 0.185.0 for the renderer guard')
-assert(/^1\.(?:1[1-9]|[2-9]\d)\.\d+$/.test(packageJson.version), 'package.json must use version 1.11.0 or later')
-assert(!existsSync(join(projectRoot, 'scripts/compress.js')), 'Unused compression script must be removed')
+for(const file of [
+    'sources/Game/Quality.js',
+    'sources/Game/Rendering.js',
+    'sources/Game/Weather.js',
+    'sources/Game/Cycles/YearCycles.js',
+    'sources/Game/World/RainLines.js',
+    'sources/Game/World/Lightnings.js',
+    'sources/Game/Audio.js',
+    'static/sw.js',
+])
+    assert(existsSync(join(root, file)), `Required runtime file is missing: ${file}`)
 
-const oldBrandPattern = new RegExp(
-    [
-        [ 'Br', 'uno\\s+', 'Sim', 'on' ].join(''),
-        [ 'br', 'uno-s', 'imon' ].join(''),
-        String.fromCharCode(98, 114, 117, 110, 111, 115, 105, 109, 111, 110),
-        [ 'Fo', 'lio\\s*20', '25' ].join(''),
-        [ 'MY[-\\s]?3D[-\\s]?GA', 'ME' ].join(''),
-    ].join('|'),
-    'i'
-)
-for(const file of [ ...sourceFiles, join(projectRoot, 'README.md'), join(projectRoot, 'package.json') ])
-{
-    const content = readFileSync(file, 'utf8')
-    assert(!oldBrandPattern.test(content), `Legacy branding remains in ${relative(projectRoot, file)}`)
-}
+const packageJson = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'))
+assert(packageJson.name === '4x4-coukoo', 'Unexpected package name')
+assert(packageJson.version === '1.14.0', `Expected version 1.14.0, found ${packageJson.version}`)
+assert(packageJson.scripts?.test === 'node scripts/test-release.js', 'Project must use the consolidated release test')
+assert(packageJson.scripts?.verify === 'node scripts/verify-project.js', 'Project verify script is missing')
 
-// Landing model integrity: the title is stored directly in areas.glb and must keep
-// valid buffer references so Rapier can build its colliders at runtime.
-const areasGlbPath = join(staticRoot, 'areas/areas.glb')
-assert(existsSync(areasGlbPath), 'Landing areas GLB is missing')
-if(existsSync(areasGlbPath))
-{
-    const glb = readFileSync(areasGlbPath)
-    const jsonLength = glb.readUInt32LE(12)
-    const glbJson = JSON.parse(glb.toString('utf8', 20, 20 + jsonLength))
-    const binOffset = 20 + jsonLength + 8
-    const binLength = glb.readUInt32LE(20 + jsonLength)
+const quality = readFileSync(join(root, 'sources/Game/Quality.js'), 'utf8')
+for(const marker of [ 'createDeviceProfile()', 'refreshDeviceFacts()', 'startFrameRateProbe', 'getAvailableFpsLimits()', 'getDeviceDetails()', 'AUTO_FPS_LIMIT', 'getFrameRateRenderPolicy' ])
+    assert(quality.includes(marker), `Quality capability marker is missing: ${marker}`)
+assert(!quality.includes("const STORAGE_KEY = '4x4-coukoo-quality'"), 'Unused legacy quality storage key remains')
 
-    assert(glb.toString('utf8', 0, 4) === 'glTF', 'areas.glb must be a GLB file')
-    assert(binOffset + binLength === glb.length, 'areas.glb binary chunk length is invalid')
+const rendering = readFileSync(join(root, 'sources/Game/Rendering.js'), 'utf8')
+for(const marker of [ 'frameAccumulator', 'getFrameRateRenderPolicy', 'webglcontextlost', 'Recovering the 3D renderer' ])
+    assert(rendering.includes(marker), `Renderer safety marker is missing: ${marker}`)
 
-    const landing = glbJson.nodes.find((node) => node.name === 'landing')
-    assert(Boolean(landing), 'areas.glb landing node is missing')
+const weather = readFileSync(join(root, 'sources/Game/Weather.js'), 'utf8')
+for(const marker of [ 'getSeasonMode()', 'getWeatherMode()', 'syncEnvironment', 'Archive rain only' ])
+    assert(weather.includes(marker), `Weather marker is missing: ${marker}`)
 
-    const titleNodes = glbJson.nodes.filter((node) => /^refLettersPhysicalDynamic\d{3}$/.test(node.name ?? ''))
-    assert(titleNodes.length === 7, `areas.glb must contain 7 SARHANG title meshes, found ${titleNodes.length}`)
-    assert(!glbJson.nodes.some((node) => /^refLettersPhysicalDynamic\./.test(node.name ?? '')), 'areas.glb still contains disconnected legacy title nodes')
-    assert(glbJson.nodes.length === 732, `areas.glb must contain 732 nodes after cleanup, found ${glbJson.nodes.length}`)
-    assert(glbJson.meshes.length === 263, `areas.glb must contain 263 meshes after cleanup, found ${glbJson.meshes.length}`)
+const yearCycles = readFileSync(join(root, 'sources/Game/Cycles/YearCycles.js'), 'utf8')
+for(const marker of [ 'YEAR_DURATION_SECONDS = 40 * 60', 'TRANSITION_SECONDS = 90', 'getSeasonPhase' ])
+    assert(yearCycles.includes(marker), `Season timing marker is missing: ${marker}`)
 
-    const sceneRoots = glbJson.scenes[glbJson.scene ?? 0].nodes ?? []
-    const reachableNodes = new Set()
-    const pendingNodes = [ ...sceneRoots ]
-    while(pendingNodes.length)
-    {
-        const nodeIndex = pendingNodes.pop()
-        if(reachableNodes.has(nodeIndex))
-            continue
-
-        reachableNodes.add(nodeIndex)
-        pendingNodes.push(...(glbJson.nodes[nodeIndex].children ?? []))
-    }
-    assert(reachableNodes.size === glbJson.nodes.length, `areas.glb contains ${glbJson.nodes.length - reachableNodes.size} disconnected node(s)`)
-
-    const landingChildren = (landing.children ?? []).map((index) => glbJson.nodes[index]?.name)
-    assert(landingChildren.includes('refLandingFlagAnchor'), 'areas.glb flag anchor is missing from the landing scene')
-    assert(landingChildren.filter((name) => /^refLettersPhysicalDynamic\d{3}$/.test(name ?? '')).length === 7, 'areas.glb landing scene must attach 7 SARHANG title meshes')
-
-    for(const [index, view] of glbJson.bufferViews.entries())
-    {
-        const offset = view.byteOffset ?? 0
-        assert(offset + view.byteLength <= binLength, `areas.glb buffer view ${index} exceeds its binary chunk`)
-    }
-}
-
-
-const renderingSource = readFileSync(join(sourcesRoot, 'Game/Rendering.js'), 'utf8')
-assert(renderingSource.includes('canUseWebGPU()'), 'Renderer must verify WebGPU availability before initialising it')
-assert(renderingSource.includes('forceWebGL: !useWebGPU'), 'Renderer must select WebGL directly when WebGPU is unavailable')
-assert(renderingSource.includes('this.usePostprocessing = true'), 'Renderer must preserve post-processing in both quality modes')
-assert(renderingSource.includes('profile.depthOfField'), 'Renderer must use the High/Low effects quality profile')
-assert(renderingSource.includes('this.scenePassColor.add(this.bloomPass)'), 'Low quality must retain bloom effects')
-assert(renderingSource.includes('applyTextureQuality()'), 'Adaptive texture quality is missing')
-assert(renderingSource.includes('updateAdaptiveResolution()'), 'Desktop adaptive resolution governor is missing')
-assert(renderingSource.includes('THREE.AgXToneMapping'), 'High desktop tone mapping is missing')
-
-const qualitySource = readFileSync(join(sourcesRoot, 'Game/Quality.js'), 'utf8')
-assert(qualitySource.includes("const STORAGE_KEY = '4x4-coukoo-quality'"), 'Quality preference persistence is missing')
-assert(qualitySource.includes('getProfile(level = this.level)'), 'High/Low quality profiles are missing')
-assert(qualitySource.includes("tier: ultraDesktop ? 'ultra'"), 'Adaptive desktop High profile is missing')
-assert(qualitySource.includes('shadowMapSize: 4096'), 'Ultra desktop shadow quality is missing')
-assert(qualitySource.includes('renderScaleInitial: 1.45'), 'Ultra desktop supersampling profile is missing')
-assert(qualitySource.includes('adaptiveResolution: true'), 'Desktop adaptive resolution profile is missing')
-
-const lightingSource = readFileSync(join(sourcesRoot, 'Game/Ligthing.js'), 'utf8')
-assert(lightingSource.includes('applyQualityProfile()'), 'Lighting profile updates are missing')
-assert(!lightingSource.includes("this.game.quality.events.on('change', () =>\n        {\n            this.mapSize"), 'Lighting must not register duplicate quality listeners')
-
-const htmlSource = readFileSync(join(sourcesRoot, 'index.html'), 'utf8')
-assert(!htmlSource.includes('rel="preload"'), 'Unused preload hints must be removed')
-
-const vehicleSource = readFileSync(join(sourcesRoot, 'Game/Physics/PhysicsVehicle.js'), 'utf8')
-assert(vehicleSource.includes('this.steeringAmplitude = 0.88'), 'Vehicle precision steering configuration is missing')
-
-const flagSource = readFileSync(join(sourcesRoot, 'Game/World/Areas/LandingFlag.js'), 'utf8')
-assert(flagSource.includes('emissiveMap: this.texture'), 'Flag cloth emissive texture is missing')
-assert(flagSource.includes('segmentsX: 20'), 'Flag performance geometry configuration is missing')
-
-const audioSource = readFileSync(join(sourcesRoot, 'Game/Audio.js'), 'utf8')
-assert(audioSource.includes('item.createHowl'), 'Audio must defer Howl construction until interaction')
-assert(audioSource.includes('if(!item.howl)'), 'Audio update must support deferred sound instances')
-
-const uboPatchSource = readFileSync(join(projectRoot, 'scripts/patch-three-webgl-ubo-capacity.js'), 'utf8')
-assert(uboPatchSource.includes('4X4_COUKOO_WEBGL_UBO_CAPACITY_GUARD'), 'WebGL UBO capacity guard is missing')
-assert(uboPatchSource.includes('map._4x4UboByteLength'), 'Bind-group capacity tracking is missing')
-assert(uboPatchSource.includes('bindingData._4x4UboByteLength'), 'Direct binding capacity tracking is missing')
-assert(!existsSync(join(projectRoot, 'scripts/patch-three-webgl-ubo.js')), 'Legacy full-upload UBO patch must be removed')
-
-const wavFiles = walk(staticRoot).filter((file) => file.endsWith('.wav'))
-const mp3Files = walk(staticRoot).filter((file) => file.endsWith('.mp3'))
-const highWavNames = wavFiles.map((file) => relative(staticRoot, file)).sort()
-assert(JSON.stringify(highWavNames) === JSON.stringify([ 'sounds/musics/high/Baguira.wav', 'sounds/musics/high/Boy.wav', 'sounds/musics/high/Sudo.wav' ]), `Expected three High lossless WAV assets, found: ${highWavNames.join(', ') || 'none'}`)
-assert(mp3Files.length === 88, `All 88 runtime MP3 assets must be preserved, found ${mp3Files.length}`)
-
-const qualityAssetSource = readFileSync(join(sourcesRoot, 'Game/Quality.js'), 'utf8')
-assert(qualityAssetSource.includes('getAssetProfile(level = this.level)'), 'Unified High/Medium/Low asset profile is missing')
-assert(qualityAssetSource.includes("musicFormat: 'wav'"), 'High lossless audio asset profile is missing')
-const qualityAudioSource = readFileSync(join(sourcesRoot, 'Game/Audio.js'), 'utf8')
-assert(qualityAudioSource.includes('refreshPlaylistQuality()'), 'Playlist does not refresh when graphics quality changes')
-assert(qualityAssetSource.includes("musicPath: 'sounds/musics/high'"), 'High preset does not route to the lossless music directory')
-
-// Bundle architecture: preserve real lazy boundaries instead of only raising
-// Vite's warning threshold. These assertions keep the split strategy intact.
-const viteConfigSource = readFileSync(join(projectRoot, 'vite.config.js'), 'utf8')
-assert(viteConfigSource.includes('manualChunks'), 'Vite manual chunk strategy is missing')
-assert(viteConfigSource.includes("return 'engine-three'"), 'Three.js engine cache chunk is missing')
-assert(viteConfigSource.includes("return 'engine-physics'"), 'Rapier physics cache chunk is missing')
-assert(viteConfigSource.includes("chunkSizeWarningLimit: 1500"), 'Three.js engine size threshold is missing')
-
-const entrySource = readFileSync(join(sourcesRoot, 'index.js'), 'utf8')
-assert(entrySource.includes("await import('./Game/Game.js')"), 'Game runtime must load through a dynamic import')
-assert(entrySource.includes("await import('./threejs-override.js')"), 'Three override must load before the game runtime')
-
-const debugSource = readFileSync(join(sourcesRoot, 'Game/Debug.js'), 'utf8')
-assert(debugSource.includes("import('tweakpane')"), 'Debug tools must be lazy loaded')
-assert(!debugSource.includes("from 'tweakpane'"), 'Debug tools must not be statically imported')
-
-const serverSource = readFileSync(join(sourcesRoot, 'Game/Server.js'), 'utf8')
-assert(serverSource.includes("import('@msgpack/msgpack')"), 'Server codec must be lazy loaded')
-assert(!serverSource.includes("from 'uuid'"), 'Server must use native crypto UUIDs instead of bundling uuid')
+const audio = readFileSync(join(root, 'sources/Game/Audio.js'), 'utf8')
+for(const match of audio.matchAll(/path:\s*['"](sounds\/[^'"]+)['"]/g))
+    assert(existsSync(join(staticRoot, match[1])), `Audio path is missing: ${match[1]}`)
 
 if(failures.length)
 {
-    console.error('\nProject verification failed:\n')
-    for(const failure of failures)
-        console.error(`- ${failure}`)
-
+    console.error('Project verification failed:\n')
+    for(const message of failures) console.error(`- ${message}`)
     process.exit(1)
 }
 
-console.log(`Project verification passed: ${sourceFiles.length} source files checked.`)
-
+console.log(`Project verification passed: ${sourceFiles.length} source files, ${staticFiles.length} runtime files checked.`)

@@ -121,7 +121,7 @@ export class Options
                 const options = this.game.quality.getAvailableFpsLimits(this.game.quality.level)
                     .map((value) => this.game.quality.getFpsLabel(value, this.game.quality.level))
                     .join(' · ')
-                fpsTooltip.textContent = `Measured browser/display cadence: ${measuredRefresh} Hz. Available for ${this.game.quality.getLabel()}: ${options}`
+                fpsTooltip.textContent = `Browser frame cadence: ${measuredRefresh} Hz. Available rates: ${options}`
             }
 
             const shadowMode = this.game.quality.getShadowMode()
@@ -151,7 +151,7 @@ export class Options
 
             this.openSettingsPicker({
                 title: 'Choose frame-rate mode',
-                description: `Measured browser/display cadence: ${measuredRefresh} Hz. Only frame rates this browser and display can really present are shown. Auto picks the best target for the current ${quality.getLabel()} graphics preset.`,
+                description: `Browser frame cadence: ${measuredRefresh} Hz. Only rates this browser is currently allowed to present are shown. Auto chooses the best target for the ${quality.getLabel()} graphics preset.`,
                 value: quality.getFpsLimit(),
                 confirmLabel: 'Apply and reload',
                 options: fpsOptions,
@@ -433,14 +433,14 @@ export class Options
             text.textContent = refresh?.state === 'measuring'
                 ? 'Calibrating display…'
                 : this.game.quality.getDeviceSummary()
-            tooltip.textContent = `${this.game.quality.getDeviceDetails()} Tap to run a fresh clean display check; no old cadence result is reused.`
+            tooltip.textContent = `${this.game.quality.getDeviceDetails()} Tap to recheck the browser frame cadence.`
         }
 
         element.addEventListener('click', () =>
         {
             this.game.quality.startFrameRateProbe({ delay: 80, force: true })
             this.game.notifications?.show(
-                '<div class="top"><div class="title">Display check</div></div><div class="bottom"><div class="description">Calibrating the browser cadence without 3D render load…</div></div>',
+                '<div class="top"><div class="title">Browser frame check</div></div><div class="bottom"><div class="description">Checking the frame cadence the browser is currently allowed to present…</div></div>',
                 'quality-assets',
                 2
             )
