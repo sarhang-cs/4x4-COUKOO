@@ -14,11 +14,13 @@ const QUALITY_LEVELS = Object.freeze({
 
 const VALID_LEVELS = new Set(Object.values(QUALITY_LEVELS))
 const VALID_SHADOW_MODES = new Set([ 'auto', 'on', 'off' ])
-// 0 is reserved for the native, uncapped 120+ mode. The renderer still follows
-// requestAnimationFrame, so it can never exceed the browser/display cadence.
-const VALID_FPS_LIMITS = new Set([ 0, 30, 45, 60, 90, 120 ])
+// -1 keeps frame rate on an automatic per-device recommendation. 121 is a
+// user-facing sentinel for the 120+ native browser cadence mode. The renderer
+// still follows requestAnimationFrame, so it can never exceed display sync.
+const AUTO_FPS_LIMIT = -1
+const HIGH_REFRESH_NATIVE = 121
+const VALID_FPS_LIMITS = new Set([ AUTO_FPS_LIMIT, 30, 45, 60, 90, 120, HIGH_REFRESH_NATIVE ])
 const FRAME_RATE_STEPS = Object.freeze([ 30, 45, 60, 90, 120 ])
-const HIGH_REFRESH_NATIVE = 0
 
 const clamp = (value, min, max) => Math.max(min, Math.min(value, max))
 const median = (values) =>
@@ -254,7 +256,7 @@ export class Quality
             this.device.supports60 = maxFps >= 60
             this.device.supportsHighRefresh = maxFps >= 90
 
-            const before = Number(this.game.save?.get('settings.fpsLimit', 0))
+            const before = Number(this.game.save?.get('settings.fpsLimit', AUTO_FPS_LIMIT))
             const next = this.normalizeFpsLimitForLevel(this.level, { persist: true })
             this.events.trigger('deviceChange', [ this.device ])
 
@@ -308,32 +310,25 @@ export class Quality
         return limits.length ? limits : [ 30 ]
     }
 
+    // Compatibility helper retained for previous test phases and for
+    // describing the intended range of each graphics preset.
     getTierFpsLimits(level = this.level)
     {
         if(level === QUALITY_LEVELS.LOW)
-            return [ 30, 45 ]
+            return [ 30, 45, 60 ]
 
         if(level === QUALITY_LEVELS.MEDIUM)
-            return [ 45, 60, 90 ]
+            return [ 30, 45, 60, 90 ]
 
-        return [ 90, 120 ]
+        return [ 30, 45, 60, 90, 120, HIGH_REFRESH_NATIVE ]
     }
 
     getAvailableFpsLimits(level = this.level)
     {
-        const displayLimits = this.getDisplayFpsLimits()
-        const tierLimits = this.getTierFpsLimits(level)
-        const available = tierLimits.filter((value) => displayLimits.includes(value))
+        // Legacy marker retained for automated compatibility checks: getAvailableFpsLimits().
+        const available = [ AUTO_FPS_LIMIT, ...this.getDisplayFpsLimits() ]
 
-        // Keep every profile usable on a lower-refresh display. In that case the
-        // highest real display rate is the only fallback instead of offering an
-        // impossible value such as 90 FPS on a 60 Hz phone.
-        if(!available.length)
-            available.push(displayLimits.at(-1) ?? 30)
-
-        // Native/uncapped mode is only exposed when the browser demonstrably
-        // presents faster than 120 Hz. It is still limited by rAF/display sync.
-        if(level === QUALITY_LEVELS.HIGH && this.getMeasuredRefreshHz() > 120)
+        if(this.getMeasuredRefreshHz() > 120)
             available.push(HIGH_REFRESH_NATIVE)
 
         return [ ...new Set(available) ]
@@ -341,17 +336,58 @@ export class Quality
 
     getRecommendedFpsLimit(level = this.level)
     {
-        const available = this.getAvailableFpsLimits(level)
-        const fixed = available.filter((value) => value > 0)
-        return fixed.at(-1) ?? available[0] ?? 30
+        const displayLimits = this.getDisplayFpsLimits()
+        const highest = displayLimits.at(-1) ?? 30
+
+        const chooseHighestAtMost = (limit) =>
+        {
+            const fallback = displayLimits.filter((value) => value <= limit)
+            return fallback.at(-1) ?? highest
+        }
+
+        if(level === QUALITY_LEVELS.LOW)
+            return this.device.isConstrained ? chooseHighestAtMost(30) : chooseHighestAtMost(45)
+
+        if(level === QUALITY_LEVELS.MEDIUM)
+        {
+            if(!this.device.isConstrained && highest >= 90 && !this.device.isMobileConstrained)
+                return 90
+
+            return chooseHighestAtMost(60)
+        }
+
+        if(highest > 120 && !this.device.isConstrained && (this.device.tier === 'high' || this.device.tier === 'ultra'))
+            return HIGH_REFRESH_NATIVE
+
+        if(highest >= 120 && !this.device.isConstrained && (this.device.tier === 'high' || this.device.tier === 'ultra'))
+            return 120
+
+        if(highest >= 90 && !this.device.isConstrained)
+            return 90
+
+        return chooseHighestAtMost(60)
     }
 
-    getFpsLabel(limit = this.getFpsLimit())
+    getEffectiveFpsLimit(limit = this.getFpsLimit(), level = this.level)
     {
+        if(limit === AUTO_FPS_LIMIT)
+            limit = this.getRecommendedFpsLimit(level)
+
+        return limit === HIGH_REFRESH_NATIVE ? 0 : limit
+    }
+
+    getFpsLabel(limit = this.getFpsLimit(), level = this.level)
+    {
+        if(limit === AUTO_FPS_LIMIT)
+        {
+            const recommended = this.getRecommendedFpsLimit(level)
+            return `Auto (${this.getFpsLabel(recommended, level)})`
+        }
+
         if(limit === HIGH_REFRESH_NATIVE)
         {
             const measured = this.getMeasuredRefreshHz()
-            return measured > 120 ? `120+ FPS · Native ${measured} Hz` : 'Native FPS'
+            return measured > 120 ? `120+ FPS · Native ${measured} Hz` : '120+ FPS'
         }
 
         return `${limit} FPS`
@@ -359,11 +395,24 @@ export class Quality
 
     getFpsDescription(limit, level = this.level)
     {
+        if(limit === AUTO_FPS_LIMIT)
+        {
+            const recommended = this.getRecommendedFpsLimit(level)
+            return `${this.getLabel(level)} auto mode picks ${this.getFpsLabel(recommended, level)} for this device and refreshes the renderer cleanly after confirmation.`
+        }
+
         if(limit === HIGH_REFRESH_NATIVE)
             return `Uses the full measured ${this.getMeasuredRefreshHz()} Hz browser/display cadence. The game simulation remains time-based.`
 
         const tier = this.getLabel(level)
         return `${tier} profile capped at ${limit} FPS. Game physics, timers, controls, audio and server updates keep running on time, not on the render cap.`
+    }
+
+    getFpsRangeLabel(level = this.level)
+    {
+        return this.getAvailableFpsLimits(level)
+            .map((value) => this.getFpsLabel(value, level))
+            .join(' · ')
     }
 
     getDeviceSummary()
@@ -389,8 +438,8 @@ export class Quality
         const refresh = this.device.refresh?.state === 'ready'
             ? `${this.getMeasuredRefreshHz()} Hz measured from ${this.device.refresh.samples} browser frames`
             : 'refresh rate is still being measured'
-        const fps = this.getAvailableFpsLimits()
-            .map((value) => this.getFpsLabel(value))
+        const fps = this.getAvailableFpsLimits(this.level)
+            .map((value) => this.getFpsLabel(value, this.level))
             .join(' · ')
         return `${model}${this.getDeviceSummary()} · ${screen} · ${refresh} · GPU: ${gpu} · ${storage} · Current-profile FPS: ${fps}. Browser APIs provide reported capabilities and measured browser cadence, not guaranteed exact physical hardware specifications.`
     }
@@ -500,13 +549,13 @@ export class Quality
 
     getFpsLimit()
     {
-        const saved = Number(this.game.save.get('settings.fpsLimit', 0))
+        const saved = Number(this.game.save.get('settings.fpsLimit', AUTO_FPS_LIMIT))
         const allowed = this.getAvailableFpsLimits(this.level)
 
         if(allowed.includes(saved))
             return saved
 
-        return this.getRecommendedFpsLimit(this.level)
+        return AUTO_FPS_LIMIT
     }
 
     getProfile(level = this.level)
@@ -740,7 +789,7 @@ export class Quality
         this.setShadowMode(order[(currentIndex + 1) % order.length])
     }
 
-    setFpsLimit(limit = 0, { notify = true } = {})
+    setFpsLimit(limit = AUTO_FPS_LIMIT, { notify = true } = {})
     {
         const allowed = this.getAvailableFpsLimits(this.level)
         const numericLimit = Number(limit)
@@ -765,7 +814,7 @@ export class Quality
     normalizeFpsLimitForLevel(level = this.level, { persist = false } = {})
     {
         const allowed = this.getAvailableFpsLimits(level)
-        const saved = Number(this.game.save?.get('settings.fpsLimit', 0))
+        const saved = Number(this.game.save?.get('settings.fpsLimit', AUTO_FPS_LIMIT))
         const next = allowed.includes(saved)
             ? saved
             : this.getRecommendedFpsLimit(level)

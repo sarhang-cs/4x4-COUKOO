@@ -7,15 +7,39 @@
         align-items center
 
     table
-        width min(100%, 410px)
-        border-spacing 0 10px
+        width min(100%, 470px)
+        border-spacing 0
 
-        td:first-child
-            width 42%
-            padding-right 22px
+        tbody
+            display grid
+            gap 10px
 
-        td:last-child
-            width 58%
+        tr
+            display grid
+            grid-template-columns minmax(118px, 0.78fr) minmax(0, 1.22fr)
+            gap 14px
+            align-items center
+            padding 12px 14px
+            border 1px solid alpha(#ffffff, 0.12)
+            border-radius 14px
+            background linear-gradient(180deg, alpha(#ffffff, 0.05), alpha(#ffffff, 0.025))
+            box-shadow inset 0 1px 0 alpha(#ffffff, 0.05)
+
+        td
+            vertical-align middle
+
+            &:first-child
+                width auto
+                padding-right 0
+                color alpha(#ffd9b0, 0.92)
+                font-size 0.76rem
+                font-weight 800
+                letter-spacing 0.12em
+                text-transform uppercase
+                line-height 1.3
+
+            &:last-child
+                width auto
 
     .audio-toggle
         img
@@ -41,16 +65,26 @@
         align-items center
         justify-content center
         width 100%
-        min-height 34px
+        min-height 50px
+        height auto
+        line-height 1.25
+        padding 12px 14px
+        border-radius 14px
+        white-space normal
+        text-align center
+
+        &.is-disabled
+            color alpha(#ffffff, 0.7)
 
     .save-status
         min-width 118px
 
     .volume-control
         display grid
-        grid-template-columns minmax(110px, 1fr) 44px
+        grid-template-columns minmax(110px, 1fr) 50px
         gap 10px
         align-items center
+        width 100%
 
         input[type="range"]
             width 100%
@@ -63,45 +97,38 @@
             text-align right
             white-space nowrap
 
-    @media (max-width: 480px)
+    @media (max-width: 520px)
         table
             width 100%
-            border-spacing 0 8px
-
-            tbody
-                display block
 
             tr
-                display block
-                padding 10px 12px
-                border 1px solid alpha(#ffffff, 0.12)
-                border-radius 12px
-                background alpha(#ffffff, 0.03)
+                grid-template-columns 1fr
+                gap 10px
+                padding 12px
 
-            td:first-child
-                display block
-                width auto
-                padding-right 0
-                padding-bottom 8px
-
-            td:last-child
-                display block
-                width auto
+            td
+                &:first-child
+                    font-size 0.72rem
+                    letter-spacing 0.1em
 
         .button
-            min-height 42px
+            min-height 46px
+            padding 11px 12px
 
         .save-status
             min-width 0
 
         .volume-control
-            grid-template-columns minmax(86px, 1fr) 38px
-            gap 7px
+            grid-template-columns minmax(86px, 1fr) 40px
+            gap 8px
 
     @media (max-width: 380px)
         table
+            tbody
+                gap 8px
+
             tr
-                padding 9px 10px
+                padding 10px
 
 .settings-picker
     position fixed

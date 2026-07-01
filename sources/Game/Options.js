@@ -62,7 +62,7 @@ export class Options
         {
             const label = this.game.quality.getLabel()
             const assetProfile = this.game.quality.getAssetProfile()
-            text.textContent = label
+            text.textContent = `${label} · ${this.game.quality.getFpsLabel(this.game.quality.getFpsLimit(), this.game.quality.level)}`
             element.dataset.qualitySource = assetProfile.id
             element.setAttribute('aria-label', `Graphics preset: ${label}. Tap to change.`)
             if(tooltip)
@@ -74,13 +74,13 @@ export class Options
             const levels = this.game.quality.constructor.LEVELS
             this.openSettingsPicker({
                 title: 'Choose graphics quality',
-                description: 'Choose one world profile. The game will save your choice, then reload with the real Low, Medium, or High assets.',
+                description: 'Choose one world profile. Each preset keeps its own real graphics profile, while the frame-rate mode below only shows options this device can actually present.',
                 value: this.game.quality.level,
                 confirmLabel: 'Confirm and reload',
                 options: [
-                    { value: levels.LOW, title: 'Low', description: 'Phase 10 lightweight world for battery-friendly mobile play.' },
-                    { value: levels.MEDIUM, title: 'Medium', description: 'Balanced full PNG and GLB world. Recommended for most phones.' },
-                    { value: levels.HIGH, title: 'High', description: 'Full-detail world, high-resolution shadows, longer visibility, and lossless music.' },
+                    { value: levels.LOW, title: 'Low', description: `Lightweight mobile world. Available FPS on this device: ${this.game.quality.getFpsRangeLabel(levels.LOW)}.` },
+                    { value: levels.MEDIUM, title: 'Medium', description: `Balanced full-content world. Available FPS on this device: ${this.game.quality.getFpsRangeLabel(levels.MEDIUM)}.` },
+                    { value: levels.HIGH, title: 'High', description: `Full-detail world with the richest renderer profile. Available FPS on this device: ${this.game.quality.getFpsRangeLabel(levels.HIGH)}.` },
                 ],
                 onConfirm: (level) =>
                 {
@@ -109,14 +109,14 @@ export class Options
         {
             const limit = this.game.quality.getFpsLimit()
             const measuredRefresh = this.game.quality.getMeasuredRefreshHz()
-            fpsText.textContent = this.game.quality.getFpsLabel(limit)
+            fpsText.textContent = this.game.quality.getFpsLabel(limit, this.game.quality.level)
             fpsElement.setAttribute('aria-label', `Frame rate limit: ${fpsText.textContent}. Tap to change.`)
 
             const fpsTooltip = fpsElement.querySelector('.tooltip')
             if(fpsTooltip)
             {
                 const options = this.game.quality.getAvailableFpsLimits(this.game.quality.level)
-                    .map((value) => this.game.quality.getFpsLabel(value))
+                    .map((value) => this.game.quality.getFpsLabel(value, this.game.quality.level))
                     .join(' · ')
                 fpsTooltip.textContent = `Measured browser/display cadence: ${measuredRefresh} Hz. Available for ${this.game.quality.getLabel()}: ${options}`
             }
@@ -131,7 +131,9 @@ export class Options
             const ratio = this.game.rendering?.activePixelRatio
             const ratioText = Number.isFinite(ratio) && ratio > 0 ? ` · ${ratio.toFixed(2)}x render` : ''
             const assetProfile = this.game.quality.getAssetProfile()
-            performanceText.textContent = `${renderer} · ${profile.name} · ${assetProfile.label} · ${fpsText.textContent}${ratioText}`
+            const actualFps = this.game.quality.getEffectiveFpsLimit(limit, this.game.quality.level)
+            const actualFpsText = actualFps > 0 ? `${actualFps} FPS target` : `Native ${measuredRefresh} Hz target`
+            performanceText.textContent = `${renderer} · ${profile.name} · ${assetProfile.label} · ${fpsText.textContent} · ${actualFpsText}${ratioText}`
         }
 
         fpsElement.addEventListener('click', () =>
@@ -140,13 +142,13 @@ export class Options
             const measuredRefresh = quality.getMeasuredRefreshHz()
             const fpsOptions = quality.getAvailableFpsLimits(quality.level).map((value) => ({
                 value,
-                title: quality.getFpsLabel(value),
-                description: quality.getFpsDescription(value),
+                title: quality.getFpsLabel(value, quality.level),
+                description: quality.getFpsDescription(value, quality.level),
             }))
 
             this.openSettingsPicker({
                 title: 'Choose frame-rate mode',
-                description: `Measured browser/display cadence: ${measuredRefresh} Hz. Only frame rates this device can present are shown. The renderer restarts cleanly after confirmation.`,
+                description: `Measured browser/display cadence: ${measuredRefresh} Hz. Only frame rates this browser and display can really present are shown. Auto picks the best target for the current ${quality.getLabel()} graphics preset.`,
                 value: quality.getFpsLimit(),
                 confirmLabel: 'Apply and reload',
                 options: fpsOptions,
@@ -156,7 +158,7 @@ export class Options
                         return
 
                     quality.setFpsLimit(limit, { notify: false })
-                    this.game.requestControlledReload(`Applying ${quality.getFpsLabel(limit)} mode…`)
+                    this.game.requestControlledReload(`Applying ${quality.getFpsLabel(limit, quality.level)} mode…`)
                 },
             })
         })

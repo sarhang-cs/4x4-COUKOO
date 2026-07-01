@@ -22,7 +22,7 @@ export class Rendering
         this.textureQualityDirty = true
         this.animationLoop = null
         this.visibilityHandler = null
-        this.frameLimit = this.game.quality.getFpsLimit()
+        this.frameLimit = this.game.quality.getEffectiveFpsLimit()
         this.lastRenderElapsed = -Infinity
         this.lastRenderTimestamp = -Infinity
         this.frameAccumulator = 0
@@ -147,7 +147,7 @@ export class Rendering
                 : THREE.NoToneMapping
             this.renderer.toneMappingExposure = profile.toneMappingExposure
             this.renderer.shadowMap.enabled = this.game.quality.getShadowsEnabled()
-            this.frameLimit = this.game.quality.getFpsLimit()
+            this.frameLimit = this.game.quality.getEffectiveFpsLimit()
             this.lastRenderElapsed = -Infinity
             this.lastRenderTimestamp = -Infinity
             this.frameAccumulator = 0
@@ -256,7 +256,7 @@ export class Rendering
 
         this.performance.lastAdjustmentElapsed = elapsed
 
-        const configuredLimit = this.game.quality.getFpsLimit()
+        const configuredLimit = this.game.quality.getEffectiveFpsLimit()
         const targetFrameTime = configuredLimit > 0
             ? 1000 / configuredLimit * 0.96
             : profile.targetFrameTime

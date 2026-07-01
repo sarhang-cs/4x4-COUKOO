@@ -48,7 +48,7 @@ const toVisualEffectsMode = (value) => [ 'auto', 'on', 'off' ].includes(value) ?
 const toFpsLimit = (value) =>
 {
     const number = Number(value)
-    return number === 30 || number === 60 ? number : 0
+    return [ -1, 30, 45, 60, 90, 120, 121 ].includes(number) ? number : -1
 }
 
 const toDayKey = (value) => typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : null
@@ -137,7 +137,7 @@ export class Save
                 audioMuted: false,
                 audioVolume: 0.8,
                 shadows: 'auto',
-                fpsLimit: 0,
+                fpsLimit: -1,
                 vibration: true,
                 visualEffects: 'auto',
                 countryCode: 'ku',
