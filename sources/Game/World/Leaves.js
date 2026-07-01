@@ -295,15 +295,23 @@ export class Leaves
 
     update()
     {
-        // Autumn visibly carries more falling leaves, while spring/summer stay
-        // calm and winter retains a light amount of wind-blown debris.
-        const season = this.game.weather?.getSeasonKey?.() ?? 'summer'
-        const seasonalRatio = {
+        // The original archive leaf particles now follow the same timed
+        // seasonal hand-off as foliage colors instead of jumping at a boundary.
+        const phase = this.game.weather?.getSeasonPhase?.() ?? {
+            from: 'summer',
+            to: 'summer',
+            mix: 0,
+        }
+        const ratios = {
             spring: 0.1,
             summer: 0.06,
             autumn: 1,
             winter: 0.22,
-        }[season] ?? 0.1
+        }
+        const from = ratios[phase.from] ?? ratios.summer
+        const to = ratios[phase.to] ?? from
+        const mix = Math.max(0, Math.min(1, Number(phase.mix) || 0))
+        const seasonalRatio = from + (to - from) * mix
         this.mesh.count = Math.max(1, Math.round(this.maxCount * seasonalRatio))
 
         this.focusPoint.value.set(this.game.view.optimalArea.position.x, this.game.view.optimalArea.position.z)

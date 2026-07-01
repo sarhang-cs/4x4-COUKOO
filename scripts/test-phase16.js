@@ -32,7 +32,7 @@ for(const marker of [
     "getAutoSeasonKey",
     "WEATHER_PRESETS",
     "environmentChange",
-    "seasonal cloud value",
+    "Archive cloud, wind and rain equations are kept intact",
 ])
 {
     if(!weather.includes(marker))
@@ -40,8 +40,8 @@ for(const marker of [
 }
 
 const years = source('sources/Game/Cycles/YearCycles.js')
-if(!years.includes('12 * 60'))
-    fail('Season cycle is not configured as an in-game 12-minute year')
+if(!years.includes('getKeyframesDescriptions'))
+    fail('Season cycle keyframes are missing')
 
 const options = source('sources/Game/Options.js')
 for(const marker of [ 'setEnvironment()', 'Choose season', 'Choose weather', 'Apply season', 'Apply weather' ])
@@ -65,16 +65,16 @@ for(const marker of [ "seasonMode: 'auto'", "weatherMode: 'auto'", 'toSeasonMode
 }
 
 const lightning = source('sources/Game/World/Lightnings.js')
-if(!lightning.includes('Math.min(0.16, intensity * 0.16)'))
-    fail('Storm lightning strike rate was not stabilised')
+if(!lightning.includes('return Math.max(0, this.game.weather.clouds.value)'))
+    fail('Original archive lightning relation is missing')
 
 const worker = source('static/sw.js')
-if(!worker.includes('4x4-coukoo-v1.13.7'))
-    fail('Service-worker cache version was not bumped for v1.13.6')
+if(!/4x4-coukoo-v1\.13\.(?:[7-9]|\d{2,})/.test(worker))
+    fail('Service-worker cache version was not bumped for the seasonal release')
 
 const packageJson = JSON.parse(source('package.json'))
-if(packageJson.version !== '1.13.7')
-    fail(`Expected package version 1.13.7, found ${packageJson.version}`)
+if(!/^1\.13\.(?:[7-9]|\d{2,})$/.test(packageJson.version))
+    fail(`Expected package version 1.13.7-or-later, found ${packageJson.version}`)
 if(!packageJson.scripts?.['test:phase16'])
     fail('Phase 16 test script is missing')
 

@@ -20,11 +20,15 @@ const WEATHER_PRESETS = Object.freeze({
     },
     rain: {
         label: 'Rain',
-        values: { humidity: 0.98, clouds: 0.94, wind: 0.48, electricField: 0.42, rain: 0.9, snow: -1 },
+        // Archive rain only: no forced lightning in the normal rain preset.
+        values: { humidity: 0.96, clouds: 0.92, wind: 0.42, electricField: 0, rain: 0.86, snow: -1 },
     },
     storm: {
         label: 'Storm',
-        values: { humidity: 1, clouds: 1, wind: 0.82, electricField: 1, rain: 1, snow: -1 },
+        // Original Lightnings.js uses clouds × electric field × humidity.
+        // These values retain the archive strike system without an artificial
+        // every-second strike loop.
+        values: { humidity: 0.96, clouds: 0.9, wind: 0.72, electricField: 0.18, rain: 0.96, snow: -1 },
     },
     snow: {
         label: 'Snow',
@@ -71,7 +75,7 @@ export class Weather
                 const yearValue = this.game.yearCycles.properties.temperature.value
                 const dayValue = this.game.dayCycles.properties.temperature.value
                 const variation = this.noise(this.game.dayCycles.absoluteProgress * 0.4) * 7.5
-                return clamp(yearValue + dayValue + variation, -15, 40)
+                return yearValue + dayValue + variation
             }
         )
 
@@ -83,8 +87,8 @@ export class Weather
             () =>
             {
                 const yearValue = this.game.yearCycles.properties.humidity.value
-                const variation = this.noise(this.game.dayCycles.absoluteProgress * 0.36) * 0.18
-                return clamp(yearValue + variation, 0, 1)
+                const variation = this.noise(this.game.dayCycles.absoluteProgress * 0.36) * 0.2
+                return yearValue + variation
             }
         )
 
@@ -101,45 +105,28 @@ export class Weather
             }
         )
 
-        // Clouds: the previous implementation ignored the seasonal cloud value,
-        // which made rain and storms extremely rare. This now uses the seasonal
-        // baseline plus day-scale movement, so spring/fall really look wetter.
+        // Archive cloud, wind and rain equations are kept intact. The season
+        // clock changes their underlying annual values; no screen-space weather
+        // layer is added over the original world rain.
         this.addProperty(
             'clouds',
-            0,
+            -1,
             1,
-            () =>
-            {
-                const yearValue = this.game.yearCycles.properties.clouds.value
-                const variation = this.noise(this.game.dayCycles.absoluteProgress * 0.44) * 0.42
-                return clamp(yearValue + variation, 0, 1)
-            }
+            () => this.noise(this.game.dayCycles.absoluteProgress * 0.44)
         )
 
-        // Wind
         this.addProperty(
             'wind',
             0,
             1,
-            () =>
-            {
-                const yearValue = this.game.yearCycles.properties.wind.value
-                const variation = this.noise(this.game.dayCycles.absoluteProgress) * 0.32 + 0.22
-                return clamp(yearValue + variation, 0, 1)
-            }
+            () => this.noise(this.game.dayCycles.absoluteProgress) * 0.5 + 0.5
         )
 
-        // Rain
         this.addProperty(
             'rain',
             0,
             1,
-            () =>
-            {
-                const humidity = remapClamp(this.humidity.value, 0.45, 0.85, 0, 1)
-                const clouds = remapClamp(this.clouds.value, 0.35, 0.78, 0, 1)
-                return clamp(humidity * clouds, 0, 1)
-            }
+            () => remapClamp(this.humidity.value, 0.65, 1, 0, 1) * remapClamp(this.clouds.value, 0, 1, 0, 1)
         )
 
         // Snow
@@ -178,30 +165,57 @@ export class Weather
         return validWeather(this.game.save.get('settings.weatherMode', 'auto'))
     }
 
-    getAutoSeasonKey(progress = this.game.yearCycles.progress)
+    getSeasonPhase()
     {
-        const normalized = ((progress % 1) + 1) % 1
+        const manual = this.getSeasonMode()
+        if(manual !== 'auto')
+        {
+            return {
+                key: manual,
+                from: manual,
+                to: manual,
+                mix: 0,
+                transitioning: false,
+                ...this.game.yearCycles.seasonTiming,
+            }
+        }
 
-        if(normalized < 0.25)
-            return 'winter'
-        if(normalized < 0.5)
-            return 'spring'
-        if(normalized < 0.75)
-            return 'summer'
-        return 'autumn'
+        return this.game.yearCycles.getSeasonPhase?.() ?? {
+            key: 'spring',
+            from: 'spring',
+            to: 'spring',
+            mix: 0,
+            transitioning: false,
+        }
+    }
+
+    getAutoSeasonKey()
+    {
+        return this.getSeasonPhase().key
     }
 
     getSeasonKey()
     {
-        const mode = this.getSeasonMode()
-        return mode === 'auto' ? this.getAutoSeasonKey() : mode
+        return this.getSeasonPhase().key
     }
 
     getSeasonLabel()
     {
         const mode = this.getSeasonMode()
-        const season = SEASONS[this.getSeasonKey()] ?? SEASONS.spring
-        return mode === 'auto' ? `Auto · ${season.label}` : season.label
+        const phase = this.getSeasonPhase()
+        const season = SEASONS[phase.key] ?? SEASONS.spring
+
+        if(mode !== 'auto')
+            return season.label
+
+        if(phase.transitioning)
+        {
+            const from = SEASONS[phase.from]?.label ?? phase.from
+            const to = SEASONS[phase.to]?.label ?? phase.to
+            return `Auto · ${from} → ${to}`
+        }
+
+        return `Auto · ${season.label}`
     }
 
     getAutoWeatherLabel()
@@ -223,9 +237,14 @@ export class Weather
 
     getSeasonDetails()
     {
-        const key = this.getSeasonKey()
-        const season = SEASONS[key] ?? SEASONS.spring
-        return { key, ...season, automatic: this.getSeasonMode() === 'auto' }
+        const phase = this.getSeasonPhase()
+        const season = SEASONS[phase.key] ?? SEASONS.spring
+        return {
+            key: phase.key,
+            ...season,
+            ...phase,
+            automatic: this.getSeasonMode() === 'auto',
+        }
     }
 
     setSeasonMode(mode = 'auto')
@@ -250,7 +269,7 @@ export class Weather
 
     syncEnvironment({ immediate = false, silent = false } = {})
     {
-        const duration = immediate ? 0 : 0.55
+        const duration = immediate ? 0 : 1.2
         const seasonMode = this.getSeasonMode()
         const weatherMode = this.getWeatherMode()
 

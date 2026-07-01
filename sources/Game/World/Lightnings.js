@@ -26,7 +26,6 @@ export class Lightnings
         this.frequency = 2
         this.hitChances = 0
         this.currentSecond = Math.floor(Date.now() / 1000)
-        this.nextGroundStrikeSecond = this.currentSecond
         this.colorA = uniform(color('#ff4c00'))
         this.colorB = uniform(color('#5180ff'))
         this.intensity = uniform(3)
@@ -41,24 +40,7 @@ export class Lightnings
             { label: 'hitChances', min: 0, max: 1, step: 0.001 },
             () =>
             {
-                // A storm should visibly strike the ground, but a 1.0 chance
-                // would create an explosion every second. Keep the live weather
-                // inputs and turn them into a readable, safe strike rate.
-                const intensity = Math.max(0, this.game.weather.clouds.value)
-                    * Math.max(0, this.game.weather.electricField.value)
-                    * this.game.weather.humidity.value
-                const baseChance = Math.min(0.16, intensity * 0.16)
-                const forcedWeather = this.game.weather?.getWeatherMode?.()
-
-                // Storm and rain settings use the original lightning, thunder
-                // and ground-impact classes from the large archive. The floor
-                // only guarantees that a selected storm becomes visible.
-                if(forcedWeather === 'storm')
-                    return Math.max(0.34, baseChance)
-                if(forcedWeather === 'rain')
-                    return Math.max(0.08, baseChance)
-
-                return baseChance
+                return Math.max(0, this.game.weather.clouds.value) * Math.max(0, this.game.weather.electricField.value) * this.game.weather.humidity.value
             }
         )
 
@@ -459,11 +441,6 @@ export class Lightnings
             // Game explosion
             const vehicleHit = this.game.explosions.explode(coordinates, 7, 4, true)
 
-            // Reuse the original archive Fireballs object for the short flame
-            // that rises from the exact lightning impact point. No new model,
-            // texture, or particle asset is introduced here.
-            this.game.world.fireballs?.create(coordinates, 2.15, 3.5)
-
             if(this.game.reveal.step === 2 && vehicleHit)
                 this.game.achievements.setProgress('lightning', 1)
             
@@ -498,23 +475,18 @@ export class Lightnings
 
             const rng = alea(this.currentSecond)
 
-            const weatherMode = this.game.weather?.getWeatherMode?.() ?? 'auto'
-            const canStrike = this.currentSecond >= this.nextGroundStrikeSecond
-
-            // Original ground strike: one storm strike is allowed every few
-            // seconds so rain stays readable instead of becoming a constant
-            // explosion loop.
-            if(canStrike && rng() < this.hitChances)
-            {
+            // Normal lightning
+            if(rng() < this.hitChances)
                 this.createRandom(rng)
-                this.nextGroundStrikeSecond = this.currentSecond + (weatherMode === 'storm' ? 7 : 12)
-            }
+
+            // Distant thunder
             else
             {
-                const distantRng = alea(this.currentSecond + 999)
-                const rainChance = Math.max(0, this.game.weather?.rain?.value ?? 0) * 0.22
-                if(distantRng() < Math.max(this.hitChances, rainChance))
+                const rng = alea(this.currentSecond + 999)
+                if(rng() < this.hitChances)
+                {
                     this.sounds.distant[Math.floor(Math.random() * this.sounds.distant.length)].play()
+                }
             }
         }
     }

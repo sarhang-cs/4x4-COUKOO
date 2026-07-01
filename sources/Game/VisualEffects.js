@@ -13,6 +13,9 @@ export class VisualEffects
         this.game = Game.getInstance()
         this.events = new Events()
         this.element = this.game.domElement.querySelector('.js-drive-vfx')
+        this.archiveWeatherLayers = this.element
+            ? [ ...this.element.querySelectorAll('.drive-vfx__rain, .drive-vfx__snow, .drive-vfx__storm') ]
+            : []
         this.lastUpdate = -Infinity
         this.state = {
             night: 0,
@@ -105,7 +108,14 @@ export class VisualEffects
 
         this.element.hidden = !enabled
         this.element.dataset.mode = this.getMode()
+        this.element.dataset.weatherSource = 'archive-world'
         this.element.setAttribute('aria-hidden', 'true')
+
+        // Rain, snow and lightning are rendered by the original archive world
+        // objects (RainLines, Snow and Lightnings). Hide the later CSS overlay
+        // so it can never create a second, screen-space rain layer.
+        for(const layer of this.archiveWeatherLayers)
+            layer.hidden = true
     }
 
     getNightStrength()
@@ -127,9 +137,8 @@ export class VisualEffects
         this.lastUpdate = elapsed
 
         const quality = this.getQualityFactor()
-        const rain = clamp(this.game.weather?.rain?.value ?? 0, 0, 1)
-        const snow = clamp(this.game.weather?.snow?.value ?? 0, 0, 1)
-        const electricField = clamp(this.game.weather?.electricField?.value ?? 0, -1, 1)
+        // game.weather remains intentionally owned by the original 3D archive
+        // classes (RainLines, Snow and Lightnings), not this CSS helper.
         const speed = remapClamp(this.game.physicalVehicle?.xzSpeed ?? 0, 8, 30, 0, 1)
         const boosting = this.game.player?.boosting ? 1 : 0
         const delta = Math.max(0.001, this.game.ticker.delta ?? 1 / 60)
@@ -137,11 +146,13 @@ export class VisualEffects
 
         const targets = {
             night: this.getNightStrength() * quality,
-            rain: rain * (0.42 + speed * 0.34) * quality,
-            snow: snow * 0.33 * quality,
+            // Archive-weather only: 3D rain/snow/lightning come directly from
+            // the original world classes, not from CSS screen overlays.
+            rain: 0,
+            snow: 0,
             speed: speed * (boosting ? 0.62 : 0.17) * quality,
-            dust: speed * (1 - rain * 0.9) * (1 - snow * 0.75) * 0.34 * quality,
-            storm: rain * remapClamp(electricField, 0.2, 1, 0, 1) * 0.18 * quality,
+            dust: speed * 0.34 * quality,
+            storm: 0,
         }
 
         for(const [ key, target ] of Object.entries(targets))

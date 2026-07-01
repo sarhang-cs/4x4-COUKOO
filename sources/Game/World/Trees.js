@@ -26,7 +26,6 @@ export class Trees
         this.baseColorB = new THREE.Color(colorB)
         this.seasonColorA = new THREE.Color()
         this.seasonColorB = new THREE.Color()
-        this.lastSeasonKey = null
 
         this.setModelParts()
         this.setBodies()
@@ -128,22 +127,28 @@ export class Trees
 
     updateSeason()
     {
-        const season = this.game.weather?.getSeasonKey?.() ?? 'summer'
-        if(season === this.lastSeasonKey)
-            return
-
-        this.lastSeasonKey = season
-
-        const profile = {
+        const phase = this.game.weather?.getSeasonPhase?.() ?? {
+            from: 'summer',
+            to: 'summer',
+            mix: 0,
+        }
+        const profiles = {
             spring: { colorA: '#8fd95a', colorB: '#d7f08b', strength: 0.32 },
             summer: { colorA: '#d3ca3f', colorB: '#d9e374', strength: 0.08 },
             autumn: { colorA: '#d3542d', colorB: '#f3a23d', strength: 0.78 },
             winter: { colorA: '#b7c7d4', colorB: '#e2e7ef', strength: 0.72 },
-        }[season] ?? { colorA: '#d3ca3f', colorB: '#d9e374', strength: 0.08 }
+        }
+        const from = profiles[phase.from] ?? profiles.summer
+        const to = profiles[phase.to] ?? from
+        const mix = Math.max(0, Math.min(1, Number(phase.mix) || 0))
+        const strength = from.strength + (to.strength - from.strength) * mix
 
-        this.seasonColorA.set(profile.colorA)
-        this.seasonColorB.set(profile.colorB)
-        this.leavesColorANode.value.copy(this.baseColorA).lerp(this.seasonColorA, profile.strength)
-        this.leavesColorBNode.value.copy(this.baseColorB).lerp(this.seasonColorB, profile.strength)
+        // The archive foliage mesh is retained. Only its two color uniforms are
+        // blended during the timed seasonal hand-off, avoiding a hard color pop.
+        this.seasonColorA.set(from.colorA).lerp(new THREE.Color(to.colorA), mix)
+        this.seasonColorB.set(from.colorB).lerp(new THREE.Color(to.colorB), mix)
+        this.leavesColorANode.value.copy(this.baseColorA).lerp(this.seasonColorA, strength)
+        this.leavesColorBNode.value.copy(this.baseColorB).lerp(this.seasonColorB, strength)
     }
+
 }

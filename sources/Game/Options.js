@@ -221,7 +221,7 @@ export class Options
             if(seasonTooltip)
             {
                 seasonTooltip.textContent = details.automatic
-                    ? 'Auto rotates spring, summer, autumn and winter every 12 minutes. You can lock any season for a live preview.'
+                    ? 'Auto rotates all four seasons in a 40-minute game year. Each season stays stable for 8 minutes 30 seconds, then blends for 90 seconds.'
                     : 'This season is locked until you choose Auto again.'
             }
 
@@ -238,11 +238,11 @@ export class Options
             const weather = this.game.weather
             this.openSettingsPicker({
                 title: 'Choose season',
-                description: 'Auto changes through a complete game year in 12 minutes. Locked seasons change foliage color, temperature, clouds, rain and snow immediately.',
+                description: 'Auto runs a 40-minute game year: each season is stable for 8 minutes 30 seconds and blends for 90 seconds into the next one. Locked seasons use the same original world assets.',
                 value: weather.getSeasonMode(),
                 confirmLabel: 'Apply season',
                 options: [
-                    { value: 'auto', title: 'Auto', description: `Current: ${weather.getSeasonDetails().label}. Rotates all four seasons while you drive.` },
+                    { value: 'auto', title: 'Auto', description: `Current: ${weather.getSeasonLabel()}. Four seasons, 10 minutes each including a 90-second blend.` },
                     { value: 'spring', title: 'Spring', description: 'Fresh foliage colors, mild temperatures and more rain opportunities.' },
                     { value: 'summer', title: 'Summer', description: 'Warm, brighter conditions with clearer skies.' },
                     { value: 'autumn', title: 'Autumn', description: 'Orange foliage, stronger wind and a wetter atmosphere.' },
@@ -257,14 +257,14 @@ export class Options
             const weather = this.game.weather
             this.openSettingsPicker({
                 title: 'Choose weather',
-                description: 'Every choice drives the real 3D rain/snow particles, wind, clouds, rain audio, lightning visuals and thunder. Storm can strike the ground near the vehicle.',
+                description: 'Every choice drives only the original archive world systems: 3D rain, snow, wind, thunder, lightning and ground effects. No screen-space rain layer is used.',
                 value: weather.getWeatherMode(),
                 confirmLabel: 'Apply weather',
                 options: [
                     { value: 'auto', title: 'Auto', description: `Current condition: ${weather.getAutoWeatherLabel()}. Uses the selected season and day cycle.` },
                     { value: 'clear', title: 'Clear', description: 'Dry sky, light wind and no precipitation.' },
-                    { value: 'rain', title: 'Rain', description: 'Visible rain particles, wet atmosphere and rain sound.' },
-                    { value: 'storm', title: 'Storm', description: 'Heavy rain, thunder, electric flashes and real lightning strikes.' },
+                    { value: 'rain', title: 'Rain', description: 'Original 3D archive rain particles and original rain ambience.' },
+                    { value: 'storm', title: 'Storm', description: 'Original archive rain, thunder, lightning and ground-impact system.' },
                     { value: 'snow', title: 'Snow', description: 'Cold snowfall with snow particles and accumulation effects.' },
                 ],
                 onConfirm: (mode) => weather.setWeatherMode(mode),

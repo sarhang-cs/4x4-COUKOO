@@ -1,0 +1,16 @@
+Original large archive verified assets
+
+RainLines.js
+e681f3cd78091a5d337d9f23e1a7f09280bde98a1b29fb83113a124325a1d94e
+
+Lightnings.js
+ecc841c7323b6e90161db0d0b1e1f6bed7abf207c9ffb4fe38ca8b5f137d144c
+
+sounds/rain/soundjay_rain-on-leaves_main-01.mp3
+764838782599a810e2f719b010b943c15eb2d86f703f57cb505b296653a6a26f
+
+sounds/thunder/distant/Thunder32GentleCr SIG014001.mp3
+72c8dc815fcb8ea251c097fe52ad8336151ccdb3e6f9b92c1fd4e538faa8d117
+
+sounds/thunder/near/Lightning-Streak-with-Thunder-Crash_TTX028903.mp3
+a7637cfdb2603cae071504ce5003baa811996cfad68a34d15a73513754cd7c0e
