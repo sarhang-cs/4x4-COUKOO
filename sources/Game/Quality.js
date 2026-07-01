@@ -26,6 +26,7 @@ export class Quality
         this.events = new Events()
         this.device = this.getDeviceProfile()
         this.level = this.getInitialLevel()
+        this.refreshBrowserCapabilities()
 
         if(this.game.debug.active)
         {
@@ -82,7 +83,9 @@ export class Quality
     getDeviceProfile()
     {
         const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
-        const memory = Number(navigator.deviceMemory ?? 4)
+        const reportedMemory = Number(navigator.deviceMemory)
+        const memoryKnown = Number.isFinite(reportedMemory) && reportedMemory > 0
+        const memory = memoryKnown ? reportedMemory : 0
         const cores = Number(navigator.hardwareConcurrency ?? 4)
         const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection
         const effectiveType = connection?.effectiveType ?? ''
@@ -91,20 +94,89 @@ export class Quality
         const gpu = this.getGpuProfile()
         const screenPixels = Math.max(1, (window.screen?.width ?? 1920) * (window.screen?.height ?? 1080))
         const desktop = !isMobile
-        const premiumDesktop = desktop && memory >= 8 && cores >= 6 && gpu.maxTextureSize >= 8192 && gpu.maxRenderbufferSize >= 8192
-        const ultraDesktop = premiumDesktop && memory >= 12 && cores >= 8 && gpu.maxTextureSize >= 16384 && (gpu.dedicatedHint || gpu.maxSamples >= 4)
+        const mobileConstrained = isMobile && ((memoryKnown && memory <= 4) || cores <= 4 || gpu.maxTextureSize <= 4096 || slowConnection)
+        const desktopConstrained = desktop && ((memoryKnown && memory <= 4) || cores <= 4 || gpu.maxTextureSize <= 4096 || slowConnection)
+        const mobileHighTier = isMobile && !mobileConstrained && (!memoryKnown || memory >= 6) && cores >= 6 && gpu.maxTextureSize >= 8192
+        const premiumDesktop = desktop && (!memoryKnown || memory >= 8) && cores >= 6 && gpu.maxTextureSize >= 8192 && gpu.maxRenderbufferSize >= 8192
+        const ultraDesktop = premiumDesktop && (!memoryKnown || memory >= 12) && cores >= 8 && gpu.maxTextureSize >= 16384 && (gpu.dedicatedHint || gpu.maxSamples >= 4)
 
         return {
             isMobile,
             desktop,
             memory,
+            memoryKnown,
             cores,
             connection: { effectiveType, saveData, slowConnection },
             gpu,
             screenPixels,
-            tier: ultraDesktop ? 'ultra' : premiumDesktop ? 'high' : 'balanced',
-            isConstrained: isMobile || memory <= 4 || cores <= 4 || gpu.maxTextureSize <= 4096 || slowConnection,
+            tier: ultraDesktop ? 'ultra' : premiumDesktop || mobileHighTier ? 'high' : 'balanced',
+            isConstrained: mobileConstrained || desktopConstrained,
+            isMobileConstrained: mobileConstrained,
+            supports60: !slowConnection && (mobileHighTier || premiumDesktop || ultraDesktop),
+            storage: { quota: null, usage: null, available: null },
+            browser: navigator.userAgentData?.brands?.map((brand) => `${brand.brand} ${brand.version}`).join(', ') || navigator.userAgent || '',
+            model: '',
         }
+    }
+
+    refreshBrowserCapabilities()
+    {
+        const storage = navigator.storage?.estimate?.()
+        if(storage?.then)
+        {
+            storage.then((estimate) =>
+            {
+                const quota = Number(estimate?.quota ?? 0)
+                const usage = Number(estimate?.usage ?? 0)
+                this.device.storage = {
+                    quota: quota || null,
+                    usage: usage || null,
+                    available: quota > 0 ? Math.max(0, quota - usage) : null,
+                }
+                this.events.trigger('deviceChange', [ this.device ])
+            }).catch(() => undefined)
+        }
+
+        const highEntropy = navigator.userAgentData?.getHighEntropyValues?.([ 'model', 'platform', 'architecture', 'bitness', 'fullVersionList' ])
+        if(highEntropy?.then)
+        {
+            highEntropy.then((details) =>
+            {
+                this.device.model = String(details?.model ?? '')
+                this.device.platform = String(details?.platform ?? '')
+                const brands = details?.fullVersionList
+                    ?.map((brand) => `${brand.brand} ${brand.version}`)
+                    .join(', ')
+                if(brands)
+                    this.device.browser = brands
+                this.events.trigger('deviceChange', [ this.device ])
+            }).catch(() => undefined)
+        }
+    }
+
+    getRecommendedFpsLimit()
+    {
+        return this.device.supports60 ? 60 : 30
+    }
+
+    getDeviceSummary()
+    {
+        const type = this.device.isMobile ? 'Mobile' : 'Desktop'
+        const tier = this.device.tier === 'high' || this.device.tier === 'ultra' ? 'High-capability' : this.device.isConstrained ? 'Constrained' : 'Balanced'
+        const cores = this.device.cores ? `${this.device.cores} logical cores` : 'CPU details unavailable'
+        const memory = this.device.memory ? `${this.device.memory} GB reported RAM` : 'RAM unavailable'
+        return `${type} · ${tier} · ${cores} · ${memory}`
+    }
+
+    getDeviceDetails()
+    {
+        const gpu = this.device.gpu?.renderer || this.device.gpu?.vendor || 'GPU details unavailable'
+        const storage = this.device.storage?.quota
+            ? `${Math.round(this.device.storage.available / 1024 / 1024)} MB available browser storage`
+            : 'Storage details unavailable'
+        const screen = `${window.screen?.width ?? 0}×${window.screen?.height ?? 0} @ ${window.devicePixelRatio || 1}x`
+        const model = this.device.model ? `${this.device.model} · ` : ''
+        return `${model}${this.getDeviceSummary()} · ${screen} · GPU: ${gpu} · ${storage}. Browser APIs provide reported capabilities, not guaranteed exact hardware specifications.`
     }
 
     getInitialLevel()
@@ -226,9 +298,9 @@ export class Quality
 
     getAvailableFpsLimits()
     {
-        return this.device.isMobile
-            ? [ 0, 30 ]
-            : [ 0, 60, 30 ]
+        return this.device.supports60
+            ? [ 0, 60, 30 ]
+            : [ 0, 30 ]
     }
 
     getProfile(level = this.level)
@@ -263,6 +335,7 @@ export class Quality
                 shadowsEnabled: false,
                 textureAnisotropy: isMobile ? 1 : 2,
                 toneMappingExposure: 1,
+                visibilityMultiplier: 0.96,
             }
         }
 
@@ -294,6 +367,7 @@ export class Quality
                 shadowsEnabled: true,
                 textureAnisotropy: isMobile ? 4 : 6,
                 toneMappingExposure: 1.04,
+                visibilityMultiplier: 1.18,
             }
         }
 
@@ -315,7 +389,9 @@ export class Quality
                 bloomThreshold: 0.9,
                 bloomSmoothWidth: 0.86,
                 bloomRadius: 0.64,
-                depthOfField: true,
+                // Preserve distant map detail on phones instead of applying a
+                // cinematic blur to the scene.
+                depthOfField: false,
                 dofRepeats: isConstrained ? 20 : 28,
                 dofAmount: isConstrained ? 0.0028 : 0.0032,
                 dofStart: 0.18,
@@ -325,6 +401,7 @@ export class Quality
                 shadowsEnabled: true,
                 textureAnisotropy: isConstrained ? 4 : 8,
                 toneMappingExposure: 1.08,
+                visibilityMultiplier: isConstrained ? 1.32 : 1.5,
             }
         }
 
@@ -346,7 +423,7 @@ export class Quality
                 bloomThreshold: 0.68,
                 bloomSmoothWidth: 1,
                 bloomRadius: 0.82,
-                depthOfField: true,
+                depthOfField: false,
                 dofRepeats: 52,
                 dofAmount: 0.0048,
                 dofStart: 0.17,
@@ -356,6 +433,7 @@ export class Quality
                 shadowsEnabled: true,
                 textureAnisotropy: 16,
                 toneMappingExposure: 1.16,
+                visibilityMultiplier: 1.55,
             }
         }
 
@@ -377,7 +455,7 @@ export class Quality
                 bloomThreshold: 0.74,
                 bloomSmoothWidth: 0.98,
                 bloomRadius: 0.76,
-                depthOfField: true,
+                depthOfField: false,
                 dofRepeats: 42,
                 dofAmount: 0.0042,
                 dofStart: 0.18,
@@ -387,6 +465,7 @@ export class Quality
                 shadowsEnabled: true,
                 textureAnisotropy: 16,
                 toneMappingExposure: 1.1,
+                visibilityMultiplier: 1.5,
             }
         }
 
@@ -406,7 +485,7 @@ export class Quality
             bloomThreshold: 0.8,
             bloomSmoothWidth: 0.94,
             bloomRadius: 0.7,
-            depthOfField: true,
+            depthOfField: false,
             dofRepeats: 34,
             dofAmount: 0.0037,
             dofStart: 0.19,
@@ -416,10 +495,11 @@ export class Quality
             shadowsEnabled: true,
             textureAnisotropy: 12,
             toneMappingExposure: 1.06,
+            visibilityMultiplier: 1.4,
         }
     }
 
-    changeLevel(level = QUALITY_LEVELS.HIGH)
+    changeLevel(level = QUALITY_LEVELS.HIGH, { notify = true } = {})
     {
         const nextLevel = VALID_LEVELS.has(level) ? level : QUALITY_LEVELS.HIGH
         if(nextLevel === this.level)
@@ -431,17 +511,19 @@ export class Quality
         const requiresWorldReload = previousAssetProfile.compressedAssets !== assetProfile.compressedAssets
 
         this.game.save.set('settings.quality', this.level, { immediate: true })
-        this.events.trigger('change', [ this.level, this.getProfile(), { previousAssetProfile, assetProfile, requiresWorldReload } ])
+        if(notify)
+            this.events.trigger('change', [ this.level, this.getProfile(), { previousAssetProfile, assetProfile, requiresWorldReload } ])
     }
 
-    setShadowMode(mode = 'auto')
+    setShadowMode(mode = 'auto', { notify = true } = {})
     {
         const nextMode = VALID_SHADOW_MODES.has(mode) ? mode : 'auto'
         if(nextMode === this.getShadowMode())
             return
 
         this.game.save.set('settings.shadows', nextMode, { immediate: true })
-        this.events.trigger('settingsChange', [ 'shadows', nextMode ])
+        if(notify)
+            this.events.trigger('settingsChange', [ 'shadows', nextMode ])
     }
 
     cycleShadowMode()
@@ -451,7 +533,7 @@ export class Quality
         this.setShadowMode(order[(currentIndex + 1) % order.length])
     }
 
-    setFpsLimit(limit = 0)
+    setFpsLimit(limit = 0, { notify = true } = {})
     {
         const allowed = this.getAvailableFpsLimits()
         const numericLimit = Number(limit)
@@ -460,7 +542,8 @@ export class Quality
             return
 
         this.game.save.set('settings.fpsLimit', nextLimit, { immediate: true })
-        this.events.trigger('settingsChange', [ 'fpsLimit', nextLimit ])
+        if(notify)
+            this.events.trigger('settingsChange', [ 'fpsLimit', nextLimit ])
     }
 
     cycleFpsLimit()

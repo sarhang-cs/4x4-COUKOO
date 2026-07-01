@@ -77,7 +77,7 @@ for(const file of staticFiles)
 
 if(!existsSync(workerPath))
     fail('Service worker is missing')
-else if(!readFileSync(workerPath, 'utf8').includes("4x4-coukoo-v1.13.2"))
+else if(!readFileSync(workerPath, 'utf8').includes("4x4-coukoo-v1.13.3"))
     fail('Service worker cache version was not bumped for the audited release')
 
 if(process.exitCode)

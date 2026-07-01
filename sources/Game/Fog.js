@@ -42,9 +42,15 @@ export class Fog
     {
         // Apply day cycles values
         const amplitude = this.game.view.optimalArea.farDistance - this.game.view.optimalArea.nearDistance
+        const profile = this.game.quality.getProfile()
+        const visibilityMultiplier = Number(profile.visibilityMultiplier ?? 1)
+        const baseNear = this.game.view.optimalArea.nearDistance + this.game.dayCycles.properties.fogNearRatio.value * amplitude
+        const baseFar = this.game.view.optimalArea.nearDistance + this.game.dayCycles.properties.fogFarRatio.value * amplitude
         this.colorA.value.copy(this.game.dayCycles.properties.fogColorA.value)
         this.colorB.value.copy(this.game.dayCycles.properties.fogColorB.value)
-        this.near.value = this.game.view.optimalArea.nearDistance + this.game.dayCycles.properties.fogNearRatio.value * amplitude
-        this.far.value = this.game.view.optimalArea.nearDistance + this.game.dayCycles.properties.fogFarRatio.value * amplitude
+        this.near.value = baseNear
+        // Medium and High keep a longer readable view of the world while Low
+        // retains its smaller fill-rate budget.
+        this.far.value = baseNear + Math.max(1, baseFar - baseNear) * visibilityMultiplier
     }
 }

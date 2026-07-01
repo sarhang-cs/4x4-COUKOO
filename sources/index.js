@@ -21,7 +21,18 @@ const createStartupError = (code, message) =>
  */
 async function boot()
 {
-    startupScreen.setStage('Checking your device')
+    let reloadStage = ''
+    try
+    {
+        reloadStage = sessionStorage.getItem('4x4-coukoo-reload-stage') || ''
+        sessionStorage.removeItem('4x4-coukoo-reload-stage')
+    }
+    catch(error)
+    {
+        reloadStage = ''
+    }
+
+    startupScreen.setStage(reloadStage || 'Checking your device')
     startupScreen.setProgress(5)
 
     if(!StartupScreen.supportsWebGL())

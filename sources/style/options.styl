@@ -102,3 +102,115 @@
         table
             tr
                 padding 9px 10px
+
+.settings-picker
+    position fixed
+    z-index 80
+    inset 0
+    display grid
+    place-items center
+    padding 20px
+    opacity 0
+    pointer-events none
+    background alpha(#100c15, 0.76)
+    backdrop-filter blur(12px)
+    transition opacity 0.18s ease
+
+    &.is-visible
+        opacity 1
+        pointer-events auto
+
+    &__panel
+        width min(100%, 460px)
+        padding 26px
+        border 1px solid alpha(#fff4dc, 0.2)
+        border-radius 20px
+        background radial-gradient(circle at top left, #4b1d44, #211824 58%, #151017)
+        box-shadow 0 28px 90px alpha(#000000, 0.5), inset 0 1px 0 alpha(#ffffff, 0.1)
+
+    &__eyebrow
+        margin-bottom 8px
+        color #ffc785
+        font-size 0.68rem
+        font-weight 900
+        letter-spacing 0.16em
+
+    &__title
+        margin 0 0 10px
+        color #ffffff
+        font-family "Amatic SC", sans-serif
+        font-size 3rem
+        line-height 0.9
+
+    &__description
+        margin 0 0 20px
+        color alpha(#ffffff, 0.72)
+        font-size 0.86rem
+        line-height 1.5
+
+    &__options
+        display grid
+        gap 10px
+
+    &__option
+        display grid
+        gap 4px
+        width 100%
+        padding 14px 15px
+        border 1px solid alpha(#ffffff, 0.15)
+        border-radius 12px
+        color alpha(#ffffff, 0.82)
+        text-align left
+        background alpha(#ffffff, 0.035)
+        transition transform 0.16s ease, border-color 0.16s ease, background 0.16s ease
+
+        strong
+            color #ffffff
+            font-size 0.95rem
+
+        span
+            color alpha(#ffffff, 0.62)
+            font-size 0.76rem
+            line-height 1.35
+
+        &.is-selected
+            border-color alpha(#ffc785, 0.9)
+            background linear-gradient(135deg, alpha(#ff8d5b, 0.22), alpha(#c65ac8, 0.17))
+            box-shadow 0 0 0 1px alpha(#ffffff, 0.08) inset
+
+        &:active
+            transform translateY(1px)
+
+        html:not(.is-mode-touch) &:hover
+            border-color alpha(#ffc785, 0.7)
+            transform translateY(-1px)
+
+    &__actions
+        display grid
+        grid-template-columns 1fr 1.35fr
+        gap 10px
+        margin-top 20px
+
+    &__cancel
+        border-color alpha(#ffffff, 0.24)
+        background alpha(#ffffff, 0.06)
+
+    &__confirm
+        border-color #ffc785
+        background linear-gradient(110deg, #cf5f3d, #a63875)
+
+    @media only screen and (max-width 520px)
+        padding 14px
+
+        &__panel
+            padding 22px 18px
+            border-radius 16px
+
+        &__title
+            font-size 2.6rem
+
+        &__actions
+            grid-template-columns 1fr
+
+        &__actions .button
+            min-height 46px

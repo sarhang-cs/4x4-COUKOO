@@ -90,3 +90,6 @@
 - Fixed queued High/Medium playlist asset changes during jukebox disc transitions.
 - Bumped the PWA cache namespace for reliable release updates.
 - Added final regression coverage for unified-quality asset behavior.
+
+## v1.13.3 — Mobile settings and quality stability
+- Confirmed Low / Medium / High selection, safer FPS and shadows reload, capability-aware device profile, sharper Medium/High distance rendering, and corrected mobile controls layout.

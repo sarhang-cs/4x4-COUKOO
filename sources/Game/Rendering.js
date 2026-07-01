@@ -24,6 +24,7 @@ export class Rendering
         this.visibilityHandler = null
         this.frameLimit = this.game.quality.getFpsLimit()
         this.lastRenderElapsed = -Infinity
+        this.lastRenderTimestamp = -Infinity
         this.performance = {
             lastAdjustmentElapsed: 0,
             slowWindows: 0,
@@ -89,6 +90,7 @@ export class Rendering
         this.animationLoop = (elapsedTime) => this.game.ticker.update(elapsedTime)
         this.renderer.setAnimationLoop(this.animationLoop)
         this.setVisibilityHandling()
+        this.setContextRecovery()
 
         this.isWebGLFallback = this.renderer.backend.isWebGLBackend
         this.applyQualityProfile()
@@ -146,6 +148,7 @@ export class Rendering
             this.renderer.shadowMap.enabled = this.game.quality.getShadowsEnabled()
             this.frameLimit = this.game.quality.getFpsLimit()
             this.lastRenderElapsed = -Infinity
+            this.lastRenderTimestamp = -Infinity
             this.applyPixelRatio()
         }
 
@@ -216,6 +219,22 @@ export class Rendering
         }
 
         document.addEventListener('visibilitychange', this.visibilityHandler, { passive: true })
+    }
+
+    setContextRecovery()
+    {
+        const canvas = this.game.canvasElement
+        if(!canvas || this.contextRecoveryBound)
+            return
+
+        this.contextRecoveryBound = true
+        canvas.addEventListener('webglcontextlost', (event) =>
+        {
+            event.preventDefault()
+            // Do not leave the HUD over an empty canvas. A controlled restart
+            // brings back the same loading screen and rebuilds the renderer.
+            this.game.requestControlledReload?.('Recovering the 3D renderer…')
+        }, { passive: false })
     }
 
     updateAdaptiveResolution()
@@ -355,12 +374,15 @@ export class Rendering
         if(!this.frameLimit)
             return true
 
-        const elapsed = this.game.ticker.elapsed
-        const interval = 1 / this.frameLimit
-        if(elapsed - this.lastRenderElapsed < interval)
+        // Use the browser's monotonic clock rather than the game ticker. This
+        // remains stable through visibility changes and avoids a stalled canvas
+        // after a frame-rate setting is changed on mobile Chromium.
+        const timestamp = performance.now()
+        const interval = 1000 / this.frameLimit
+        if(timestamp - this.lastRenderTimestamp < interval)
             return false
 
-        this.lastRenderElapsed = elapsed
+        this.lastRenderTimestamp = timestamp
         return true
     }
 

@@ -7,9 +7,11 @@ export class Options
         this.game = Game.getInstance()
         this.element = this.game.menu.items.get('options').contentElement
 
+        this.setSettingsPicker()
         this.setSound()
         this.setQuality()
         this.setPerformance()
+        this.setDeviceProfile()
         this.setVisualEffects()
         this.setVibration()
         this.setFullscreen()
@@ -67,7 +69,30 @@ export class Options
                 tooltip.textContent = assetProfile.description
         }
 
-        element.addEventListener('click', () => this.game.quality.changeLevel(this.game.quality.getNextLevel()))
+        element.addEventListener('click', () =>
+        {
+            const levels = this.game.quality.constructor.LEVELS
+            this.openSettingsPicker({
+                title: 'Choose graphics quality',
+                description: 'Choose one world profile. The game will save your choice, then reload with the real Low, Medium, or High assets.',
+                value: this.game.quality.level,
+                confirmLabel: 'Confirm and reload',
+                options: [
+                    { value: levels.LOW, title: 'Low', description: 'Phase 10 lightweight world for battery-friendly mobile play.' },
+                    { value: levels.MEDIUM, title: 'Medium', description: 'Balanced full PNG and GLB world. Recommended for most phones.' },
+                    { value: levels.HIGH, title: 'High', description: 'Full-detail world, high-resolution shadows, longer visibility, and lossless music.' },
+                ],
+                onConfirm: (level) =>
+                {
+                    if(level === this.game.quality.level)
+                        return
+
+                    this.game.quality.changeLevel(level, { notify: false })
+                    const profile = this.game.quality.getAssetProfile(level)
+                    this.game.requestControlledReload(`Loading ${profile.label} world assets…`)
+                },
+            })
+        })
         this.game.quality.events.on('change', update)
         update()
     }
@@ -83,7 +108,8 @@ export class Options
         const update = () =>
         {
             const limit = this.game.quality.getFpsLimit()
-            fpsText.textContent = limit ? `${limit} FPS` : 'Auto'
+            const recommended = this.game.quality.getRecommendedFpsLimit()
+            fpsText.textContent = limit ? `${limit} FPS` : `Auto · ${recommended} target`
             fpsElement.setAttribute('aria-label', `Frame rate limit: ${fpsText.textContent}. Tap to change.`)
 
             const fpsTooltip = fpsElement.querySelector('.tooltip')
@@ -105,14 +131,223 @@ export class Options
             const ratio = this.game.rendering?.activePixelRatio
             const ratioText = Number.isFinite(ratio) && ratio > 0 ? ` · ${ratio.toFixed(2)}x render` : ''
             const assetProfile = this.game.quality.getAssetProfile()
-            performanceText.textContent = `${renderer} · ${profile.name} · ${assetProfile.label}${ratioText}`
+            performanceText.textContent = `${renderer} · ${profile.name} · ${assetProfile.label} · ${fpsText.textContent}${ratioText}`
         }
 
-        fpsElement.addEventListener('click', () => this.game.quality.cycleFpsLimit())
-        shadowsElement.addEventListener('click', () => this.game.quality.cycleShadowMode())
+        fpsElement.addEventListener('click', () =>
+        {
+            const recommended = this.game.quality.getRecommendedFpsLimit()
+            const fpsOptions = this.game.quality.getAvailableFpsLimits().map((value) => ({
+                value,
+                title: value ? `${value} FPS` : `Auto · ${recommended} FPS target`,
+                description: value
+                    ? `Keeps the renderer near ${value} frames per second.`
+                    : `Uses this device profile and adapts toward ${recommended} FPS when the browser allows it.`,
+            }))
+
+            this.openSettingsPicker({
+                title: 'Choose frame-rate mode',
+                description: 'Frame-rate changes restart the 3D renderer cleanly so the canvas does not glitch or turn blank.',
+                value: this.game.quality.getFpsLimit(),
+                confirmLabel: 'Apply and reload',
+                options: fpsOptions,
+                onConfirm: (limit) =>
+                {
+                    if(limit === this.game.quality.getFpsLimit())
+                        return
+
+                    this.game.quality.setFpsLimit(limit, { notify: false })
+                    this.game.requestControlledReload(`Applying ${limit ? `${limit} FPS` : 'automatic frame-rate'} mode…`)
+                },
+            })
+        })
+
+        shadowsElement.addEventListener('click', () =>
+        {
+            const shadowOptions = [
+                { value: 'auto', title: 'Auto', description: 'Uses the shadow level recommended by the selected graphics profile.' },
+                { value: 'on', title: 'On', description: 'Always enables shadows. This needs more GPU memory.' },
+                { value: 'off', title: 'Off', description: 'Turns shadows off for the best frame stability.' },
+            ]
+
+            this.openSettingsPicker({
+                title: 'Choose shadow mode',
+                description: 'Shadow changes restart the renderer cleanly to prevent a black or blank 3D canvas.',
+                value: this.game.quality.getShadowMode(),
+                confirmLabel: 'Apply and reload',
+                options: shadowOptions,
+                onConfirm: (mode) =>
+                {
+                    if(mode === this.game.quality.getShadowMode())
+                        return
+
+                    this.game.quality.setShadowMode(mode, { notify: false })
+                    this.game.requestControlledReload('Applying shadow setting…')
+                },
+            })
+        })
         this.game.quality.events.on('change', update)
         this.game.quality.events.on('settingsChange', update)
         this.game.viewport.events.on('change', update)
+        update()
+    }
+
+    setSettingsPicker()
+    {
+        const overlay = document.createElement('div')
+        overlay.className = 'settings-picker'
+        overlay.hidden = true
+        overlay.setAttribute('aria-hidden', 'true')
+
+        const panel = document.createElement('section')
+        panel.className = 'settings-picker__panel'
+        panel.setAttribute('role', 'dialog')
+        panel.setAttribute('aria-modal', 'true')
+        panel.setAttribute('aria-labelledby', 'settings-picker-title')
+
+        const eyebrow = document.createElement('div')
+        eyebrow.className = 'settings-picker__eyebrow'
+        eyebrow.textContent = '4X4 COUKOO SETTINGS'
+
+        const title = document.createElement('h2')
+        title.className = 'settings-picker__title'
+        title.id = 'settings-picker-title'
+
+        const description = document.createElement('p')
+        description.className = 'settings-picker__description'
+
+        const options = document.createElement('div')
+        options.className = 'settings-picker__options'
+        options.setAttribute('role', 'listbox')
+
+        const actions = document.createElement('div')
+        actions.className = 'settings-picker__actions'
+
+        const cancel = document.createElement('button')
+        cancel.className = 'button settings-picker__cancel'
+        cancel.type = 'button'
+        cancel.textContent = 'Cancel'
+
+        const confirm = document.createElement('button')
+        confirm.className = 'button settings-picker__confirm'
+        confirm.type = 'button'
+
+        actions.append(cancel, confirm)
+        panel.append(eyebrow, title, description, options, actions)
+        overlay.append(panel)
+        this.game.domElement.append(overlay)
+
+        this.settingsPicker = {
+            overlay,
+            title,
+            description,
+            options,
+            cancel,
+            confirm,
+            selected: null,
+            current: null,
+            previousFocus: null,
+        }
+
+        cancel.addEventListener('click', () => this.closeSettingsPicker())
+        overlay.addEventListener('click', (event) =>
+        {
+            if(event.target === overlay)
+                this.closeSettingsPicker()
+        })
+        confirm.addEventListener('click', () =>
+        {
+            const picker = this.settingsPicker
+            const current = picker.current
+            if(!current || picker.selected === null)
+                return
+
+            const selected = picker.selected
+            this.closeSettingsPicker()
+            current.onConfirm?.(selected)
+        })
+    }
+
+    openSettingsPicker(configuration)
+    {
+        const picker = this.settingsPicker
+        if(!picker)
+            return
+
+        picker.current = configuration
+        picker.selected = configuration.value
+        picker.previousFocus = document.activeElement
+        picker.title.textContent = configuration.title
+        picker.description.textContent = configuration.description
+        picker.confirm.textContent = configuration.confirmLabel || 'Confirm'
+        picker.options.replaceChildren()
+
+        const render = () =>
+        {
+            for(const button of picker.options.querySelectorAll('button'))
+            {
+                const active = button.dataset.value === String(picker.selected)
+                button.classList.toggle('is-selected', active)
+                button.setAttribute('aria-selected', active ? 'true' : 'false')
+            }
+        }
+
+        for(const option of configuration.options)
+        {
+            const button = document.createElement('button')
+            button.className = 'settings-picker__option'
+            button.type = 'button'
+            button.dataset.value = String(option.value)
+            button.setAttribute('role', 'option')
+
+            const optionTitle = document.createElement('strong')
+            optionTitle.textContent = option.title
+            const optionDescription = document.createElement('span')
+            optionDescription.textContent = option.description
+            button.append(optionTitle, optionDescription)
+
+            button.addEventListener('click', () =>
+            {
+                picker.selected = option.value
+                render()
+            })
+            picker.options.append(button)
+        }
+
+        render()
+        picker.overlay.hidden = false
+        picker.overlay.setAttribute('aria-hidden', 'false')
+        requestAnimationFrame(() => picker.overlay.classList.add('is-visible'))
+        window.setTimeout(() => picker.options.querySelector('.is-selected, button')?.focus(), 40)
+    }
+
+    closeSettingsPicker()
+    {
+        const picker = this.settingsPicker
+        if(!picker || picker.overlay.hidden)
+            return
+
+        picker.overlay.classList.remove('is-visible')
+        picker.overlay.setAttribute('aria-hidden', 'true')
+        window.setTimeout(() => { picker.overlay.hidden = true }, 180)
+        picker.previousFocus?.focus?.()
+    }
+
+    setDeviceProfile()
+    {
+        const element = this.element.querySelector('.js-device-profile')
+        if(!element)
+            return
+
+        const text = element.querySelector('span')
+        const tooltip = element.querySelector('.tooltip')
+        const update = () =>
+        {
+            text.textContent = this.game.quality.getDeviceSummary()
+            tooltip.textContent = this.game.quality.getDeviceDetails()
+        }
+
+        this.game.quality.events.on('deviceChange', update)
         update()
     }
 

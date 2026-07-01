@@ -262,18 +262,31 @@ export class Game
 
     reloadForQualityAssets(assetProfile)
     {
+        this.requestControlledReload(`Loading ${assetProfile?.label ?? 'selected'} world assets…`)
+    }
+
+    requestControlledReload(stage = 'Preparing the selected game settings…')
+    {
         if(this.qualityAssetReloadScheduled)
             return
 
         this.qualityAssetReloadScheduled = true
-        const label = assetProfile?.label ?? 'selected'
+        try
+        {
+            sessionStorage.setItem('4x4-coukoo-reload-stage', stage)
+        }
+        catch(error)
+        {
+            // The game can still reload in browsers that block session storage.
+        }
+
         this.notifications?.show(
-            `<div class="top"><div class="title">Graphics preset saved</div></div><div class="bottom"><div class="description">Loading ${label} world assets…</div></div>`,
+            `<div class="top"><div class="title">Settings saved</div></div><div class="bottom"><div class="description">${stage}</div></div>`,
             'quality-assets',
-            2
+            1
         )
 
-        window.setTimeout(() => window.location.reload(), 650)
+        window.setTimeout(() => window.location.reload(), 260)
     }
 
     reset()
