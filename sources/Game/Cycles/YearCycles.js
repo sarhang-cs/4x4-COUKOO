@@ -16,10 +16,10 @@ export class YearCycles extends Cycles
     getKeyframesDescriptions()
     {
         const presets = {
-            winter: { leaves: 0.25, temperature: 5,  humidity: 0.8, clouds: 0.65, wind: 0.3 },
-            spring: { leaves: 0, temperature: 15, humidity: 0.65, clouds: 0.45, wind: 0.2 },
-            summer: { leaves: 0.25, temperature: 25, humidity: 0.5, clouds: 0.3,  wind: 0.1 },
-            fall:   { leaves: 1, temperature: 15, humidity: 0.65, clouds: 0.65, wind: 0.25 },
+            winter: { leaves: 0.2, temperature: -8, humidity: 0.92, clouds: 0.86, wind: 0.44 },
+            spring: { leaves: 0.05, temperature: 12, humidity: 0.78, clouds: 0.7, wind: 0.3 },
+            summer: { leaves: 0.25, temperature: 25, humidity: 0.46, clouds: 0.24, wind: 0.12 },
+            fall:   { leaves: 1, temperature: 11, humidity: 0.84, clouds: 0.8, wind: 0.38 },
         }
         
         return [

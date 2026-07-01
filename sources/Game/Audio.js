@@ -18,6 +18,7 @@ export class Audio
 
         this.setVolume()
         this.setMute()
+        this.setAudioUnlock()
 
         // One quality system controls the playlist source as well as rendering.
         // High uses the retained lossless masters; Medium and Low keep the MP3
@@ -28,6 +29,31 @@ export class Audio
         {
             this.update()
         }, 14)
+    }
+
+    setAudioUnlock()
+    {
+        this.unlock = () =>
+        {
+            if(!this.initiated)
+                return
+
+            const context = Howler.ctx
+            if(context?.state === 'suspended')
+                context.resume().catch(() => {})
+        }
+
+        // Android browsers can suspend an AudioContext after a tab switch or
+        // power-saving transition. Any real player gesture unlocks the same
+        // original archive sounds again without creating replacement audio.
+        for(const eventName of [ 'pointerdown', 'touchend', 'keydown' ])
+            window.addEventListener(eventName, this.unlock, { passive: true })
+
+        document.addEventListener('visibilitychange', () =>
+        {
+            if(document.visibilityState === 'visible')
+                this.unlock()
+        }, { passive: true })
     }
 
     pause()
@@ -51,12 +77,13 @@ export class Audio
     init()
     {
         if(this.initiated)
+        {
+            this.unlock()
             return
+        }
 
         this.initiated = true
-
-        if(Howler.ctx?.state === 'suspended')
-            Howler.ctx.resume().catch(() => {})
+        this.unlock()
 
         this.setPlaylist()
         this.setAmbiants()
@@ -118,10 +145,17 @@ export class Audio
                 autoplay: false,
                 loop: options.loop ?? false,
                 volume: options.volume ?? 0.5,
-                preload: false,
-                onloaderror: () =>
+                // The original archive file is preloaded after the player's
+                // first gesture. This avoids the unreliable load+play race that
+                // caused silent rain/thunder on some mobile Chromium builds.
+                preload: true,
+                onloaderror: (_id, error) =>
                 {
-                    console.error(`Audio > Load error > ${options.path}`, options)
+                    console.error(`Audio > Load error > ${options.path}`, error, options)
+                },
+                onplayerror: () =>
+                {
+                    this.unlock()
                 },
                 onend: () =>
                 {
@@ -142,6 +176,7 @@ export class Audio
         item.onPlaying = options.onPlaying ?? null
         item.onPlay = options.onPlay ?? null
         item.loaded = false
+        item.waitingForLoad = false
         item.autoplay = options.autoplay ?? false
         item.playing = (this.initiated && options.autoplay) ?? false
         item.id = group.items.length
@@ -149,39 +184,48 @@ export class Audio
         item.play = (...parameters) =>
         {
             if(!this.initiated)
-            {
                 return
-            }
 
             const howl = item.createHowl()
 
-            // Load only after Audio.init() has been called by a user gesture.
-            if(!item.loaded)
-            {
-                item.loaded = true
-                howl.load()
-            }
-
             // Anti spam
-            if(item.antiSpam)
-            {
-                if(this.game.ticker.elapsed - item.lastPlay < item.antiSpam)
-                    return
-            }
+            if(item.antiSpam && this.game.ticker.elapsed - item.lastPlay < item.antiSpam)
+                return
 
-            // Play binding
+            // Play binding must run before loading so positional/rate/volume
+            // values are ready when the original sound begins.
             if(typeof item.onPlay === 'function')
                 item.onPlay(item, ...parameters)
-                
-            // Play
-            howl.play()
 
-            // Save last play for anti spam
             item.lastPlay = this.game.ticker.elapsed
             item.playing = true
-
-            // Save for group
             group.lastPlayedId = item.id
+
+            const startPlayback = () =>
+            {
+                item.waitingForLoad = false
+                this.unlock()
+                howl.rate(clamp(item.rate * (this.globalRate ?? 1), 0.5, 4))
+                howl.volume(item.volume)
+                howl.mute(item.volume < 0.01)
+                howl.play()
+            }
+
+            if(howl.state() !== 'loaded')
+            {
+                // One queued start is enough for loop sounds and avoids a burst
+                // of duplicate thunder/rain after a slow network decode.
+                if(!item.waitingForLoad)
+                {
+                    item.waitingForLoad = true
+                    howl.once('load', startPlayback)
+                    howl.once('loaderror', () => { item.waitingForLoad = false; item.playing = false })
+                    howl.load()
+                }
+                return
+            }
+
+            startPlayback()
         }
 
         group.items.push(item)
@@ -202,8 +246,9 @@ export class Audio
             pool: 0,
             autoplay: false,
             loop: false,
-            preload: false,
+            preload: true,
             volume: 0.2,
+            onplayerror: () => this.unlock(),
             onend: () =>
             {
                 this.playlist?.next()

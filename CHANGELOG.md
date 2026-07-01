@@ -101,3 +101,9 @@
 - Kept simulation, physics, input, audio and server timing independent from the render cap.
 - Restored the startup/loading screen immediately before controlled settings reloads to avoid blank canvas transitions.
 - Refreshed the PWA cache version and Vercel HTML cache policy.
+
+
+## v1.13.7 — Original archive weather/audio restore
+- Restored reliable playback for original archive sound files.
+- Reconnected original rain, thunder, lightning ground impact and fireball visual path.
+- Tuned season values so existing spring, autumn and winter systems are observable.

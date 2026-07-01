@@ -69,12 +69,12 @@ if(!lightning.includes('Math.min(0.16, intensity * 0.16)'))
     fail('Storm lightning strike rate was not stabilised')
 
 const worker = source('static/sw.js')
-if(!worker.includes('4x4-coukoo-v1.13.6'))
+if(!worker.includes('4x4-coukoo-v1.13.7'))
     fail('Service-worker cache version was not bumped for v1.13.6')
 
 const packageJson = JSON.parse(source('package.json'))
-if(packageJson.version !== '1.13.6')
-    fail(`Expected package version 1.13.6, found ${packageJson.version}`)
+if(packageJson.version !== '1.13.7')
+    fail(`Expected package version 1.13.7, found ${packageJson.version}`)
 if(!packageJson.scripts?.['test:phase16'])
     fail('Phase 16 test script is missing')
 

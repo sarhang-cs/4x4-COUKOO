@@ -20,7 +20,7 @@ const WEATHER_PRESETS = Object.freeze({
     },
     rain: {
         label: 'Rain',
-        values: { humidity: 0.98, clouds: 0.92, wind: 0.42, electricField: 0.16, rain: 0.88, snow: -1 },
+        values: { humidity: 0.98, clouds: 0.94, wind: 0.48, electricField: 0.42, rain: 0.9, snow: -1 },
     },
     storm: {
         label: 'Storm',
