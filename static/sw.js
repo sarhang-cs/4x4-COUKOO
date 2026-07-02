@@ -1,5 +1,5 @@
 /* 4X4 COUKOO offline shell. Runtime files are cached after first successful load. */
-const CACHE_VERSION = '4x4-coukoo-v1.14.1'
+const CACHE_VERSION = '4x4-coukoo-v1.14.3-intro-prompt'
 const CORE_CACHE = `${CACHE_VERSION}-core`
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`
 const CORE_FILES = [

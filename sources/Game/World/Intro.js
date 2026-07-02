@@ -117,93 +117,42 @@ export class Intro
     {
         this.text = {}
 
-        // Geometry
-        const scale = 1.22
-        const geometry = new THREE.PlaneGeometry(2.22 * scale, 1.16 * scale)
+        // The old in-world texture label could be viewed at a sharp angle on
+        // narrow phones, making “Tap to start” look clipped. Keep the vehicle
+        // scene as the intro, but render the instruction as a responsive DOM
+        // overlay so it always stays readable.
+        const element = document.createElement('div')
+        element.className = 'intro-start-prompt'
+        element.setAttribute('aria-live', 'polite')
+        element.setAttribute('aria-hidden', 'true')
 
-        // Material
-        const material = new THREE.MeshBasicNodeMaterial({
-            transparent: true
-        })
+        const arrow = document.createElement('span')
+        arrow.className = 'intro-start-prompt__arrow'
+        arrow.textContent = '↙'
 
-        const applyTextureToMaterial = (labelTexture) =>
-        {
-            material.outputNode = Fn(() =>
-            {
-                texture(labelTexture, vec2(uv().x, uv().y.oneMinus())).r.lessThan(0.5).discard()
-                return vec4(1)
-            })()
-            material.needsUpdate = true
-            mesh.visible = true
-        }
+        const label = document.createElement('span')
+        label.className = 'intro-start-prompt__label'
 
-        // Texture
-        this.text.textures = new Map()
-        this.text.layouts = {
-            mouseKeyboard: { x: 0, y: 0.08, scaleX: 1, scaleY: 1 },
-            gamepadXbox: { x: 0, y: 0.08, scaleX: 1, scaleY: 1 },
-            gamepadPlaystation: { x: 0, y: 0.08, scaleX: 1, scaleY: 1 },
-            touch: { x: 0.06, y: 0.1, scaleX: 0.96, scaleY: 0.96 },
-        }
-        this.text.applyLayout = (name) =>
+        element.append(arrow, label)
+        this.game.domElement.append(element)
+
+        this.text.element = element
+        this.text.label = label
+        this.text.updateLabel = () =>
         {
-            const layout = this.text.layouts[name] ?? this.text.layouts.mouseKeyboard
-            mesh.position.set(layout.x, layout.y, 0)
-            mesh.scale.set(layout.scaleX, layout.scaleY, 1)
-        }
-        this.text.updateTexture = async () =>
-        {
-            // Define name
-            let name = 'mouseKeyboard'
+            let value = 'Click to start'
 
             if(this.game.inputs.mode === Inputs.MODE_GAMEPAD)
-            {
-                if(this.game.inputs.gamepad.type === 'xbox')
-                    name = 'gamepadXbox'
-                else
-                    name = 'gamepadPlaystation'
-            }
+                value = 'Press A to start'
             else if(this.game.inputs.mode === Inputs.MODE_TOUCH)
-            {
-                name = 'touch'
-            }
+                value = 'Tap to start'
 
-            this.text.applyLayout(name)
-
-            // Load, set and save texture
-            let cachedTexture = this.text.textures.get(name)
-            if(!cachedTexture)
-            {
-                const loader = this.game.resourcesLoader.getLoader('texture')
-                const resourcePath = `intro/${name}Label.png`
-                loader.load(
-                    resourcePath,
-                    (loadedTexture) =>
-                    {
-                        loadedTexture.generateMipmaps = false
-                        loadedTexture.colorSpace = THREE.SRGBColorSpace
-                        loadedTexture.needsUpdate = true
-                        this.text.textures.set(name, loadedTexture)
-                        applyTextureToMaterial(loadedTexture)
-                    }
-                )
-            }
-            else
-            {
-                applyTextureToMaterial(cachedTexture)
-            }
+            label.textContent = value
         }
 
-        this.game.inputs.gamepad.events.on('typeChange', this.text.updateTexture)
-        this.game.inputs.events.on('modeChange', this.text.updateTexture)
-
-        const mesh = new THREE.Mesh(geometry, material)
-        mesh.visible = false
-
-        this.label.add(mesh)
-
-        this.text.mesh = mesh
-        this.text.updateTexture()
+        this.text.updateLabel()
+        this.game.inputs.gamepad.events.on('typeChange', this.text.updateLabel)
+        this.game.inputs.events.on('modeChange', this.text.updateLabel)
     }
 
     setSoundButton()
@@ -283,6 +232,12 @@ export class Intro
                 }
             }
         )
+
+        requestAnimationFrame(() =>
+        {
+            this.text.element?.classList.add('is-visible')
+            this.text.element?.setAttribute('aria-hidden', 'false')
+        })
     }
 
     hideLabel()
@@ -302,7 +257,7 @@ export class Intro
                 },
                 onComplete: () =>
                 {
-                    this.text.mesh.removeFromParent()
+                    this.text.element?.remove()
                     this.soundButton.mesh.removeFromParent()
                     this.game.rayCursor.removeIntersect(this.soundButton.intersect)
                 }
@@ -327,24 +282,18 @@ export class Intro
         // Geometries
         this.circle.mesh.geometry.dispose()
         this.soundButton.mesh.geometry.dispose()
-        this.text.mesh.geometry.dispose()
 
         // Materials
         this.circle.mesh.material.dispose()
         this.soundButton.mesh.material.dispose()
-        this.text.mesh.material.dispose()
 
         // Textures
         this.game.resources.soundTexture.dispose()
+        this.text.element?.remove()
 
-        this.text.textures.forEach((value, key) =>
-        {
-            value.dispose()
-        })
-        
         // Events
         this.game.ticker.events.off('tick', this.update)
-        this.game.inputs.gamepad.events.off('typeChange', this.text.updateTexture)
-        this.game.inputs.events.off('modeChange', this.text.updateTexture)
+        this.game.inputs.gamepad.events.off('typeChange', this.text.updateLabel)
+        this.game.inputs.events.off('modeChange', this.text.updateLabel)
     }
 }
