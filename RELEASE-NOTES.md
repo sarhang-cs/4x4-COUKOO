@@ -1,3 +1,6 @@
-# 4X4 COUKOO v1.14.1
+# Release Notes
 
-Clean release with a consolidated quality system, honest browser capability reporting, archive-only weather effects, and a minimal verified project structure.
+## v1.14.2
+
+- README restored with screenshots and updated current-release information.
+- Vite production build warning removed by aligning the chunk warning threshold with the validated bundle layout.

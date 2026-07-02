@@ -203,7 +203,9 @@ export default defineConfig(({ mode }) =>
             emptyOutDir: true,
             target: 'esnext',
             sourcemap: false,
-            chunkSizeWarningLimit: 1500,
+            // Largest validated engine chunk is intentionally above Vite's default warning threshold.
+            // Raise the warning limit so successful production builds stay warning-free.
+            chunkSizeWarningLimit: 2000,
             rollupOptions:
             {
                 output:
