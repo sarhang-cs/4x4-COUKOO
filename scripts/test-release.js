@@ -31,7 +31,7 @@ if(existsSync(areaPath))
 }
 
 const worker = readFileSync(join(staticRoot, 'sw.js'), 'utf8')
-assert(worker.includes('4x4-coukoo-v1.14.0'), 'Service-worker cache version is not 1.14.0')
+assert(worker.includes('4x4-coukoo-v1.14.1'), 'Service-worker cache version is not 1.14.1')
 
 const source = (file) => readFileSync(join(root, file), 'utf8')
 assert(source('sources/Game/VisualEffects.js').includes("dataset.weatherSource = 'archive-world'"), 'Archive-only weather rendering is not enabled')

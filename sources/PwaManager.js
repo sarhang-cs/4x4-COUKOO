@@ -36,6 +36,7 @@ export class PwaManager
         this.registrationFailed = false
         this.game = null
         this.controllerChanged = false
+        this.pendingSilentUpdate = false
 
         this.onBeforeInstallPrompt = (event) =>
         {
@@ -84,7 +85,8 @@ export class PwaManager
                     return
 
                 this.controllerChanged = true
-                if(this.updateAvailable)
+
+                if(this.pendingSilentUpdate || this.updateAvailable)
                     window.location.reload()
             })
         }
@@ -99,16 +101,32 @@ export class PwaManager
 
     observeRegistration(registration)
     {
-        const handleInstalledWorker = (worker) =>
+        const handleInstalledWorker = (worker, reason = 'updatefound') =>
         {
-            if(navigator.serviceWorker.controller)
-                this.markUpdateAvailable()
-            else
+            if(!worker)
+                return
+
+            if(!navigator.serviceWorker.controller)
+            {
                 worker.postMessage({ type: 'SKIP_WAITING' })
+                return
+            }
+
+            // If a waiting worker already exists during startup, apply it
+            // quietly so players are not blocked by the same update banner on
+            // every launch before entering the world.
+            if(reason === 'startup-waiting')
+            {
+                this.pendingSilentUpdate = true
+                worker.postMessage({ type: 'SKIP_WAITING' })
+                return
+            }
+
+            this.markUpdateAvailable()
         }
 
         if(registration.waiting)
-            handleInstalledWorker(registration.waiting)
+            handleInstalledWorker(registration.waiting, 'startup-waiting')
 
         registration.addEventListener('updatefound', () =>
         {

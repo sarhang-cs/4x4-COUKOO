@@ -118,75 +118,81 @@ export class Intro
         this.text = {}
 
         // Geometry
-        const scale = 1.3
-        const geometry = new THREE.PlaneGeometry(2 * scale, 1 * scale)
+        const scale = 1.22
+        const geometry = new THREE.PlaneGeometry(2.22 * scale, 1.16 * scale)
+
+        // Material
+        const material = new THREE.MeshBasicNodeMaterial({
+            transparent: true
+        })
+
+        const applyTextureToMaterial = (labelTexture) =>
+        {
+            material.outputNode = Fn(() =>
+            {
+                texture(labelTexture, vec2(uv().x, uv().y.oneMinus())).r.lessThan(0.5).discard()
+                return vec4(1)
+            })()
+            material.needsUpdate = true
+            mesh.visible = true
+        }
 
         // Texture
         this.text.textures = new Map()
+        this.text.layouts = {
+            mouseKeyboard: { x: 0, y: 0.08, scaleX: 1, scaleY: 1 },
+            gamepadXbox: { x: 0, y: 0.08, scaleX: 1, scaleY: 1 },
+            gamepadPlaystation: { x: 0, y: 0.08, scaleX: 1, scaleY: 1 },
+            touch: { x: 0.06, y: 0.1, scaleX: 0.96, scaleY: 0.96 },
+        }
+        this.text.applyLayout = (name) =>
+        {
+            const layout = this.text.layouts[name] ?? this.text.layouts.mouseKeyboard
+            mesh.position.set(layout.x, layout.y, 0)
+            mesh.scale.set(layout.scaleX, layout.scaleY, 1)
+        }
         this.text.updateTexture = async () =>
         {
             // Define name
             let name = 'mouseKeyboard'
-            
+
             if(this.game.inputs.mode === Inputs.MODE_GAMEPAD)
             {
                 if(this.game.inputs.gamepad.type === 'xbox')
-                {
                     name = 'gamepadXbox'
-                }
                 else
-                {
                     name = 'gamepadPlaystation'
-                }
             }
             else if(this.game.inputs.mode === Inputs.MODE_TOUCH)
             {
                 name = 'touch'
             }
 
+            this.text.applyLayout(name)
+
             // Load, set and save texture
             let cachedTexture = this.text.textures.get(name)
             if(!cachedTexture)
             {
-                const assetProfile = this.game.quality.getAssetProfile()
-                const loader = this.game.resourcesLoader.getLoader(assetProfile.textureLoader)
-                const resourcePath = `intro/${name}Label.${assetProfile.textureExtension}`
+                const loader = this.game.resourcesLoader.getLoader('texture')
+                const resourcePath = `intro/${name}Label.png`
                 loader.load(
                     resourcePath,
                     (loadedTexture) =>
                     {
+                        loadedTexture.generateMipmaps = false
+                        loadedTexture.colorSpace = THREE.SRGBColorSpace
+                        loadedTexture.needsUpdate = true
                         this.text.textures.set(name, loadedTexture)
-
-                        // Update material and mesh
-                        material.outputNode = Fn(() =>
-                        {
-                            texture(loadedTexture, vec2(uv().x, uv().y.oneMinus())).r.lessThan(0.5).discard()
-                            return vec4(1)
-                        })()
-                        material.needsUpdate = true
-                        mesh.visible = true
+                        applyTextureToMaterial(loadedTexture)
                     }
                 )
             }
             else
             {
-                // Update material and mesh
-                material.outputNode = Fn(() =>
-                {
-                    texture(cachedTexture, vec2(uv().x, uv().y.oneMinus())).r.lessThan(0.5).discard()
-                    return vec4(1)
-                })()
-                material.needsUpdate = true
+                applyTextureToMaterial(cachedTexture)
             }
-
         }
-
-        this.text.updateTexture()
-
-        // Material
-        const material = new THREE.MeshBasicNodeMaterial({
-            transparent: true
-        })
 
         this.game.inputs.gamepad.events.on('typeChange', this.text.updateTexture)
         this.game.inputs.events.on('modeChange', this.text.updateTexture)
@@ -197,6 +203,7 @@ export class Intro
         this.label.add(mesh)
 
         this.text.mesh = mesh
+        this.text.updateTexture()
     }
 
     setSoundButton()

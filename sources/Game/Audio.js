@@ -16,6 +16,12 @@ export class Audio
         this.groups = new Map()
         this.events = new Events()
 
+        // Howler's built-in auto unlock/suspend can trigger Chromium
+        // autoplay warnings before the intro interaction on some Android
+        // browsers. The game already manages resume/pause itself.
+        Howler.autoUnlock = false
+        Howler.autoSuspend = false
+
         this.setVolume()
         this.setMute()
         this.setAudioUnlock()

@@ -75,7 +75,7 @@ for(const file of [
 
 const packageJson = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'))
 assert(packageJson.name === '4x4-coukoo', 'Unexpected package name')
-assert(packageJson.version === '1.14.0', `Expected version 1.14.0, found ${packageJson.version}`)
+assert(packageJson.version === '1.14.1', `Expected version 1.14.1, found ${packageJson.version}`)
 assert(packageJson.scripts?.test === 'node scripts/test-release.js', 'Project must use the consolidated release test')
 assert(packageJson.scripts?.verify === 'node scripts/verify-project.js', 'Project verify script is missing')
 

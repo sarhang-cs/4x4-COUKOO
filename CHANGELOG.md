@@ -1,3 +1,10 @@
+
+## v1.14.1 — UI, audio and PWA stability
+
+- Prevented premature AudioContext setup before the first player gesture.
+- Made waiting service-worker activation silent during startup to avoid repeating update prompts.
+- Stabilized and enlarged the intro start-label layout on mobile.
+
 # Changelog
 
 ## v1.14.0 — Clean Rebuild
