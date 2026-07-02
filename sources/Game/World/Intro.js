@@ -117,42 +117,64 @@ export class Intro
     {
         this.text = {}
 
-        // The old in-world texture label could be viewed at a sharp angle on
-        // narrow phones, making “Tap to start” look clipped. Keep the vehicle
-        // scene as the intro, but render the instruction as a responsive DOM
-        // overlay so it always stays readable.
-        const element = document.createElement('div')
-        element.className = 'intro-start-prompt'
-        element.setAttribute('aria-live', 'polite')
-        element.setAttribute('aria-hidden', 'true')
+        // Keep the original in-world start prompt. The PNG files have the same
+        // artwork as the original prompt assets, but their browser orientation
+        // is stable across mobile GPUs. The only visual correction here is the
+        // vertical UV direction so “Tap to start” stays upright.
+        const scale = 1.3
+        const geometry = new THREE.PlaneGeometry(2 * scale, 1 * scale)
+        const material = new THREE.MeshBasicNodeMaterial({
+            transparent: true
+        })
+        const mesh = new THREE.Mesh(geometry, material)
+        mesh.visible = false
+        this.label.add(mesh)
 
-        const arrow = document.createElement('span')
-        arrow.className = 'intro-start-prompt__arrow'
-        arrow.textContent = '↙'
-
-        const label = document.createElement('span')
-        label.className = 'intro-start-prompt__label'
-
-        element.append(arrow, label)
-        this.game.domElement.append(element)
-
-        this.text.element = element
-        this.text.label = label
-        this.text.updateLabel = () =>
+        this.text.mesh = mesh
+        this.text.textures = new Map()
+        this.text.updateTexture = () =>
         {
-            let value = 'Click to start'
+            let name = 'mouseKeyboard'
 
             if(this.game.inputs.mode === Inputs.MODE_GAMEPAD)
-                value = 'Press A to start'
+                name = this.game.inputs.gamepad.type === 'xbox' ? 'gamepadXbox' : 'gamepadPlaystation'
             else if(this.game.inputs.mode === Inputs.MODE_TOUCH)
-                value = 'Tap to start'
+                name = 'touch'
 
-            label.textContent = value
+            const applyTexture = (labelTexture) =>
+            {
+                // TextureLoader already supplies the browser image in the
+                // correct vertical orientation. Do not flip the V coordinate.
+                material.outputNode = Fn(() =>
+                {
+                    texture(labelTexture, uv()).r.lessThan(0.5).discard()
+                    return vec4(1)
+                })()
+                material.needsUpdate = true
+                mesh.visible = true
+            }
+
+            const cachedTexture = this.text.textures.get(name)
+            if(cachedTexture)
+            {
+                applyTexture(cachedTexture)
+                return
+            }
+
+            const loader = this.game.resourcesLoader.getLoader('texture')
+            loader.load(`intro/${name}Label.png`, (loadedTexture) =>
+            {
+                loadedTexture.generateMipmaps = false
+                loadedTexture.colorSpace = THREE.SRGBColorSpace
+                loadedTexture.needsUpdate = true
+                this.text.textures.set(name, loadedTexture)
+                applyTexture(loadedTexture)
+            })
         }
 
-        this.text.updateLabel()
-        this.game.inputs.gamepad.events.on('typeChange', this.text.updateLabel)
-        this.game.inputs.events.on('modeChange', this.text.updateLabel)
+        this.game.inputs.gamepad.events.on('typeChange', this.text.updateTexture)
+        this.game.inputs.events.on('modeChange', this.text.updateTexture)
+        this.text.updateTexture()
     }
 
     setSoundButton()
