@@ -1,6 +1,6 @@
 {
   "framework": "vite",
-  "installCommand": "npm install --no-audit --no-fund",
+  "installCommand": "npm ci --no-audit --no-fund --prefer-offline --fetch-retries=5 --fetch-retry-factor=2 --fetch-retry-mintimeout=10000 --fetch-retry-maxtimeout=120000",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "headers": [
