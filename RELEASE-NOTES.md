@@ -1,6 +1,5 @@
 # Release Notes
 
-## v1.14.2
+## v1.15.0
 
-- README restored with screenshots and updated current-release information.
-- Vite production build warning removed by aligning the chunk warning threshold with the validated bundle layout.
+This release removes the Coukoo Garage and all coin-based UI, then focuses the project on a cleaner driving-world experience. The menu and settings system now handles mobile safe areas and visual viewport changes more reliably, while browser/device detection is calibrated from actual exposed capabilities and live requestAnimationFrame cadence.

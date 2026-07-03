@@ -149,13 +149,6 @@
                 <button data-name="close" class="js-button close"></button>
             </div>
         </div>
-
-        <!-- Persisted mission currency -->
-        <div class="coukoo-coins js-coukoo-coins" aria-label="Mission coins">
-            <span class="coukoo-coins__mark" aria-hidden="true">C</span>
-            <span class="js-coukoo-coins-value">0</span>
-        </div>
-
         <div class="controller-status js-controller-status" aria-live="polite" hidden>
             <span aria-hidden="true">🎮</span>
             <span class="js-controller-status-label">Controller</span>
@@ -234,16 +227,6 @@
                             </div>
                         </div>
                     </button>
-
-                    <!-- Garage & missions -->
-                    <button class="js-navigation-item item" data-name="garage" aria-label="Garage and missions">
-                        <div class="button-inner">
-                            <div class="icon-container">
-                                <img src="ui/wheel.svg" loading="lazy" alt="">
-                            </div>
-                        </div>
-                    </button>
-
                     <!-- Circuit -->
                     <button class="js-navigation-item item" data-name="circuit">
                         <div class="button-inner">
@@ -294,17 +277,6 @@
                         <!-- Achievements -->
                         <div class="js-preview preview achievements-preview">
                             <img class="background" src="ui/previews/achievements.webp" loading="lazy" draggable="false">
-                        </div>
-
-                        <!-- Garage -->
-                        <div class="js-preview preview garage-preview" aria-hidden="true">
-                            <div class="garage-preview__grid"></div>
-                            <div class="garage-preview__vehicle">
-                                <span class="garage-preview__wheel garage-preview__wheel--front"></span>
-                                <span class="garage-preview__wheel garage-preview__wheel--rear"></span>
-                                <span class="garage-preview__body"></span>
-                            </div>
-                            <div class="garage-preview__label">COUKOO GARAGE</div>
                         </div>
 
                         <!-- Circuit -->
@@ -847,49 +819,6 @@
                                         Reset achievements
                                     </button>
                                     
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Garage & missions -->
-                        <div class="js-content content garage-content">
-                            <div class="content-inner">
-                                <div class="garage-header">
-                                    <div>
-                                        <div class="title">Garage</div>
-                                        <p class="text text-faded">Complete driving missions, earn coins, and unlock another 4X4 body.</p>
-                                    </div>
-                                    <div class="garage-balance" aria-live="polite">
-                                        <span class="garage-balance__mark">C</span>
-                                        <span class="js-garage-coins">0 coins</span>
-                                    </div>
-                                </div>
-
-                                <div class="garage-section garage-daily-section">
-                                    <h2 class="garage-section__title">Daily reward</h2>
-                                    <div class="js-daily-reward daily-reward">
-                                        <div class="daily-reward__top">
-                                            <div>
-                                                <strong class="daily-reward__title">Drive streak</strong>
-                                                <p class="js-daily-status daily-reward__status">Checking today’s reward…</p>
-                                            </div>
-                                            <span class="js-daily-amount daily-reward__amount">+25 coins</span>
-                                        </div>
-                                        <div class="daily-reward__bottom">
-                                            <span class="js-daily-streak daily-reward__streak">1 / 7 days</span>
-                                            <button type="button" class="js-daily-claim daily-reward__button button is-small">Collect reward</button>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="garage-section">
-                                    <h2 class="garage-section__title">Driving missions</h2>
-                                    <div class="js-mission-list mission-list"></div>
-                                </div>
-
-                                <div class="garage-section">
-                                    <h2 class="garage-section__title">Vehicle collection</h2>
-                                    <div class="js-garage-list garage-list"></div>
                                 </div>
                             </div>
                         </div>

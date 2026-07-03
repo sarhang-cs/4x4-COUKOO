@@ -389,3 +389,31 @@ html:not(.is-server-offline) .offline-element
 html:not(.is-server-online) .online-element
     display none !important
 
+
+// Dynamic viewport and safe-area foundation. The values are maintained by
+// Viewport.js so Safari and Android browser chrome do not trap menu content
+// behind the home indicator or prevent scrolling after an address-bar resize.
+:root
+    --coukoo-vw 100vw
+    --coukoo-vh 100dvh
+    --coukoo-visual-scale 1
+    --coukoo-safe-top env(safe-area-inset-top, 0px)
+    --coukoo-safe-right env(safe-area-inset-right, 0px)
+    --coukoo-safe-bottom env(safe-area-inset-bottom, 0px)
+    --coukoo-safe-left env(safe-area-inset-left, 0px)
+
+html
+body
+.game
+.modals
+.menu
+    width var(--coukoo-vw)
+    height var(--coukoo-vh)
+
+@supports (height: 100dvh)
+    html
+    body
+    .game
+    .modals
+    .menu
+        min-height 100dvh

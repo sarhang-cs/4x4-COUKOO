@@ -6,7 +6,7 @@
 
 ### Interactive 3D Driving World
 
-**Developer: Sarhang Salah · SARHANG IO · 2026 · v1.14.2**
+**Developer: Sarhang Salah · SARHANG IO · 2026 · v1.15.0**
 
 <img src="./static/readme/4x4-coukoo-cover.png" alt="4X4 COUKOO cover artwork" width="100%" />
 
@@ -27,7 +27,7 @@
 
 ## Overview
 
-**4X4 COUKOO** is an interactive browser-based 3D driving world created by **Sarhang Salah** under **SARHANG IO**. It combines off-road driving, physics interactions, stylized exploration, real-time lighting, weather, seasons, touch controls, keyboard controls, controller support, saved progress, missions, garage rewards, and installable PWA delivery in one world.
+**4X4 COUKOO** is an interactive browser-based 3D driving world created by **Sarhang Salah** under **SARHANG IO**. It combines off-road driving, physics interactions, stylized exploration, real-time lighting, weather, seasons, touch controls, keyboard controls, controller support, local saves, and installable PWA delivery in one world.
 
 The project is designed for **mobile, tablet, and desktop**. It uses the browser's best supported renderer path and keeps a WebGL compatibility path when WebGPU is unavailable.
 
@@ -37,42 +37,39 @@ The project is designed for **mobile, tablet, and desktop**. It uses the browser
 | --- | --- |
 | <img src="./static/readme/4x4-coukoo-cover.png" alt="4X4 COUKOO world screenshot" width="100%" /> | <img src="./static/readme/4x4-coukoo-ui.png" alt="4X4 COUKOO menu and settings screenshot" width="100%" /> |
 
-## v1.14.2 — Full UI, Audio and PWA Stability Fix
+## v1.15.0 — Responsive UI and Runtime Cleanup
 
-This release keeps the cleaned unified runtime and restores the richer README presentation with screenshots.
-
-- One maintained runtime architecture for **Low / Medium / High**.
-- Graphics quality is selected through the in-game system before the 3D world fully reloads.
-- The FPS system supports **Auto / 30 / 45 / 60 / 90 / 120 / 120+** where the browser can truly present them.
-- The settings UI, intro interaction, audio start flow, and PWA update behaviour were stabilized in the latest fixes.
-- Device information uses only browser-exposed APIs. Hidden values are reported as unavailable instead of guessed.
-- Seasons, rain, snow, thunder, lightning, and ground-fire effects use the restored archive runtime assets.
-- High uses full PNG/GLB assets and lossless music; Medium uses full PNG/GLB plus MP3; Low uses the existing lightweight runtime variants.
-- The source ZIP intentionally excludes `node_modules` and generated `dist`; Vercel or local npm commands create them from the lockfile.
+- Removed the **Coukoo Garage**, daily reward, mission-currency and on-screen coin HUD systems from the runtime and saved profile.
+- Reworked the menu viewport, safe-area, touch scrolling, and settings modal behavior for Safari/iPhone, Galaxy, Redmi/Xiaomi, Vivo, tablets, and desktop browsers.
+- Responsive behavior is driven by actual browser viewport and safe-area values rather than fixed phone-model dimensions.
+- Added richer browser capability profiling: exposed model, device family, CPU core count, browser-reported memory, WebGL/WebGPU facts, screen/viewport state, storage, battery, and live browser frame cadence.
+- Auto graphics now chooses Low, Medium, or High from observed browser capability. It does not guess a chipset or panel refresh rate when the browser hides it.
+- Browser frame cadence is measured during the startup screen and reconfirmed after the world loads. FPS choices remain limited to what the active browser can actually present.
+- Medium and High mobile profiles receive a larger pixel budget when observed GPU/CPU facts support it, while adaptive resolution now moves more gradually to reduce visible quality jumps.
+- The original in-world start prompt artwork remains in place; only its image orientation is corrected.
+- Seasons, rain, snow, thunder, lightning, ground-fire effects, and audio use the retained archive runtime assets.
 
 ## Graphics Quality Profiles
 
 | Profile | Runtime asset profile | Intended use |
 | --- | --- | --- |
 | **Low** | Lightweight Phase 10 model path and stable mobile rendering | Battery-friendly and constrained devices |
-| **Medium** | Full PNG and GLB world with balanced renderer settings | Recommended starting profile for most devices |
-| **High** | Full-detail world, stronger shadows, larger visibility budget, full effects, lossless music | Strong mobile devices and desktop hardware |
+| **Medium** | Full PNG and GLB world with balanced renderer settings | Recommended for balanced mobile, tablet, and desktop browsers |
+| **High** | Full-detail world, stronger shadows, larger visibility budget, full effects, lossless music | Browsers with observed strong GPU/CPU capability |
 
-Each profile changes real rendering settings such as render scale, render-pixel budget, texture filtering, shadows, bloom, visibility budget, and post-processing cost. The available FPS menu is filtered to the display/browser capability at that moment.
+Each profile changes real rendering settings such as render scale, render-pixel budget, texture filtering, shadows, bloom, visibility budget, and post-processing cost. **Auto** chooses a recommended rendering target for the selected profile; manual frame-rate options are filtered by the current browser cadence.
 
 ## Device Capability Profile
 
-The in-game **Device profile** is intentionally truthful. It can show only the information exposed by the current browser, such as:
+The in-game **Device profile** reports only browser-exposed values:
 
-- Browser-reported device model, when available
-- Logical CPU core count
-- Browser-reported RAM, when available
-- GPU / WebGL renderer information, when exposed
-- Screen resolution and device pixel ratio
-- Browser storage estimate, when exposed
-- Measured `requestAnimationFrame` cadence
+- Browser-reported model and device family, when available
+- Logical CPU core count and browser-reported memory, when available
+- WebGL renderer, GPU limits, and WebGPU API availability, when exposed
+- Screen, current visual viewport, pixel ratio, color gamut, storage, and battery state when exposed
+- Live `requestAnimationFrame` cadence measured during startup
 
-Browsers do not provide a universal, reliable API for exact chipset names, exact physical panel refresh rate, total physical RAM, or all storage details. When the browser hides a value, the game reports it as unavailable instead of guessing.
+Browsers do not universally reveal exact chipset names, full physical RAM, or a display panel's advertised refresh rate. When unavailable, the game reports the value as hidden rather than inventing a result.
 
 ## Dynamic Seasons and Weather
 
@@ -82,20 +79,17 @@ The world includes the restored runtime weather and season systems:
 - **Summer** — bright, clearer environment
 - **Autumn** — warmer foliage colours and stronger falling-leaf ambience
 - **Winter** — colder tone and snow-capable conditions
-- **Rain** — 3D rain and archive-provided rain audio
-- **Storm** — rain, thunder, lightning, ground impact, and archive-provided fire effect
+- **Rain** — original 3D rain and archive-provided rain audio
+- **Storm** — original rain, thunder, lightning, ground impact, and archive-provided fire effect
 - **Snow** — snow conditions using the existing runtime assets
-
-Weather and season effects use the validated archive/runtime assets included with the project. Source-only files such as design files, editor backups, and unrelated portfolio resources are not part of the production runtime.
 
 ## Gameplay Features
 
 - Drive an off-road vehicle through a stylized 3D island.
 - Explore landmarks, interactive points, maps, secrets, and environmental details.
 - Use touch controls, keyboard and mouse, or a compatible gamepad.
-- Play missions, collect coins, unlock garage content, and claim daily rewards.
 - Track Circuit personal bests and share local results.
-- Save quality, audio, controls, progression, missions, vehicles, and rewards on the device.
+- Save quality, audio, controls, progression, achievements, Circuit data, weather, and vehicle state on the device.
 - Use pause controls, replay the driving tutorial, and recover with Respawn if stuck.
 - Experience day/night light changes, fog, wind, water, weather, seasons, particles, and environmental interaction.
 
@@ -139,12 +133,6 @@ npm install
 npm run dev
 ```
 
-Open the local Vite address, usually:
-
-```text
-http://localhost:5173
-```
-
 ## Quality Assurance
 
 ```bash
@@ -154,32 +142,15 @@ npm run build
 npm run release-check
 ```
 
-`release-check` verifies the source structure, runs the test suite, builds production output, and audits the release files.
-
-## Production Build
-
-```bash
-npm run build
-npm run preview
-```
-
 ## PWA and Offline Play
 
 The production build is installable as a Progressive Web App.
 
 - Android / Chromium browsers: use **Install app** from the in-game options or browser menu.
 - iPhone / iPad: use **Share → Add to Home Screen**.
-- Offline support is handled by the service worker after the required assets have been cached.
-
-Set the production site URL before a final canonical/social build when needed:
-
-```bash
-VITE_SITE_URL=https://your-public-domain.example
-```
+- Offline support is handled by the service worker after required files have been cached.
 
 ## Deploy on Vercel
-
-Use these values when importing the repository:
 
 ```text
 Framework Preset: Vite
@@ -190,31 +161,3 @@ Node.js Version: 22.12+ (Node 24 is also supported)
 ```
 
 See [`DEPLOYMENT-CHECKLIST.md`](./DEPLOYMENT-CHECKLIST.md) for launch checks.
-
-## Project Structure
-
-```text
-4x4-COUKOO/
-├── scripts/                 Verification, test, build, and release-audit utilities
-├── sources/                 Core game source
-│   ├── Game/                Gameplay, physics, rendering, UI, audio, and world systems
-│   ├── data/                Game data and content definitions
-│   ├── style/               Stylus stylesheets
-│   ├── index.html           Application shell and social metadata
-│   └── index.js             Application entry point
-├── static/                  Models, textures, sounds, fonts, icons, and images
-│   └── readme/              GitHub README screenshots
-├── package.json             Dependencies and npm scripts
-├── vite.config.js           Vite configuration
-├── vercel.json              Vercel deployment configuration
-├── LICENSE                  MIT license text
-└── README.md                Project documentation
-```
-
-## Performance Notes
-
-- The first visit can take longer because the browser must load models, textures, audio, and shaders.
-- A modern browser with hardware acceleration enabled is recommended.
-- Browser refresh capability can be reduced by battery saver, browser policy, thermal state, or the current display mode. The game measures browser cadence instead of assuming an advertised device refresh rate.
-- Use **Auto** first. Change Low / Medium / High before choosing a manual FPS target.
-- Close unused tabs on mobile devices when testing High mode.

@@ -69,13 +69,14 @@ for(const file of [
     'sources/Game/World/RainLines.js',
     'sources/Game/World/Lightnings.js',
     'sources/Game/Audio.js',
+    'sources/Game/Viewport.js',
     'static/sw.js',
 ])
     assert(existsSync(join(root, file)), `Required runtime file is missing: ${file}`)
 
 const packageJson = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'))
 assert(packageJson.name === '4x4-coukoo', 'Unexpected package name')
-assert(packageJson.version === '1.14.1', `Expected version 1.14.1, found ${packageJson.version}`)
+assert(packageJson.version === '1.15.0', `Expected version 1.15.0, found ${packageJson.version}`)
 assert(packageJson.scripts?.test === 'node scripts/test-release.js', 'Project must use the consolidated release test')
 assert(packageJson.scripts?.verify === 'node scripts/verify-project.js', 'Project verify script is missing')
 
@@ -83,6 +84,13 @@ const quality = readFileSync(join(root, 'sources/Game/Quality.js'), 'utf8')
 for(const marker of [ 'createDeviceProfile()', 'refreshDeviceFacts()', 'startFrameRateProbe', 'getAvailableFpsLimits()', 'getDeviceDetails()', 'AUTO_FPS_LIMIT', 'getFrameRateRenderPolicy' ])
     assert(quality.includes(marker), `Quality capability marker is missing: ${marker}`)
 assert(!quality.includes("const STORAGE_KEY = '4x4-coukoo-quality'"), 'Unused legacy quality storage key remains')
+assert(quality.includes('evaluateDeviceCapability()'), 'Device capability evaluator is missing')
+assert(quality.includes('syncViewportFacts()'), 'Viewport capability sync is missing')
+
+const gameSource = readFileSync(join(root, 'sources/Game/Game.js'), 'utf8')
+assert(!gameSource.includes("./Garage.js"), 'Removed Garage runtime is still imported')
+assert(!gameSource.includes("./Missions.js"), 'Removed missions runtime is still imported')
+assert(!gameSource.includes("./DailyRewards.js"), 'Removed daily reward runtime is still imported')
 
 const rendering = readFileSync(join(root, 'sources/Game/Rendering.js'), 'utf8')
 for(const marker of [ 'frameAccumulator', 'getFrameRateRenderPolicy', 'webglcontextlost', 'Recovering the 3D renderer' ])

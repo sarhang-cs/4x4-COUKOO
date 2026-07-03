@@ -65,6 +65,32 @@ const parseAndroidModel = (userAgent = '') =>
     return /^(wv|k|linux|android|mobile)$/i.test(model) ? '' : model
 }
 
+
+const classifyDeviceFamily = (userAgent = '', model = '') =>
+{
+    const value = `${userAgent} ${model}`.toLowerCase()
+    if(/iphone|ipad|ipod/.test(value)) return 'apple-mobile'
+    if(/samsung|sm-[a-z0-9]+|galaxy/.test(value)) return 'samsung'
+    if(/redmi|xiaomi|poco|mi\s/.test(value)) return 'xiaomi'
+    if(/vivo|iqoo/.test(value)) return 'vivo'
+    if(/oppo|realme|oneplus/.test(value)) return 'oppo-family'
+    if(/android/.test(value)) return 'android'
+    if(/macintosh|windows|linux/.test(value)) return 'desktop'
+    return 'unknown'
+}
+
+const getGpuScore = (gpu = {}) =>
+{
+    let score = 0
+    if(gpu.webgl2) score += 2
+    if(gpu.maxTextureSize >= 16384) score += 4
+    else if(gpu.maxTextureSize >= 8192) score += 3
+    else if(gpu.maxTextureSize >= 4096) score += 1
+    if(gpu.maxRenderbufferSize >= 8192) score += 2
+    if(gpu.maxSamples >= 4) score += 1
+    return score
+}
+
 export class Quality
 {
     static LEVELS = QUALITY_LEVELS
@@ -74,6 +100,7 @@ export class Quality
         this.game = Game.getInstance()
         this.events = new Events()
         this.device = this.createDeviceProfile()
+        this.evaluateDeviceCapability()
         this.level = this.getInitialLevel()
         this.refreshDeviceFacts()
 
@@ -103,7 +130,10 @@ export class Quality
             maxTextureSize: 0,
             maxRenderbufferSize: 0,
             maxSamples: 0,
+            maxVertexTextures: 0,
+            maxVaryingVectors: 0,
             webgl2: false,
+            webgpu: Boolean(navigator.gpu?.requestAdapter),
         }
 
         try
@@ -125,7 +155,10 @@ export class Quality
                 maxTextureSize: numeric(context.getParameter(context.MAX_TEXTURE_SIZE)),
                 maxRenderbufferSize: numeric(context.getParameter(context.MAX_RENDERBUFFER_SIZE)),
                 maxSamples: context.MAX_SAMPLES ? numeric(context.getParameter(context.MAX_SAMPLES)) : 0,
+                maxVertexTextures: context.MAX_VERTEX_TEXTURE_IMAGE_UNITS ? numeric(context.getParameter(context.MAX_VERTEX_TEXTURE_IMAGE_UNITS)) : 0,
+                maxVaryingVectors: context.MAX_VARYING_VECTORS ? numeric(context.getParameter(context.MAX_VARYING_VECTORS)) : 0,
                 webgl2: typeof WebGL2RenderingContext !== 'undefined' && context instanceof WebGL2RenderingContext,
+                webgpu: Boolean(navigator.gpu?.requestAdapter),
             }
         }
         catch(error)
@@ -137,7 +170,8 @@ export class Quality
     createDeviceProfile()
     {
         const userAgent = navigator.userAgent || ''
-        const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(userAgent)
+        const uaData = navigator.userAgentData
+        const isMobile = Boolean(uaData?.mobile) || /Mobi|Android|iPhone|iPad|iPod/i.test(userAgent)
         const memory = numeric(navigator.deviceMemory)
         const memoryKnown = memory > 0
         const cores = Math.max(1, numeric(navigator.hardwareConcurrency, 0)) || null
@@ -145,16 +179,18 @@ export class Quality
         const effectiveType = connection?.effectiveType ?? ''
         const saveData = Boolean(connection?.saveData)
         const gpu = this.createGpuProfile()
-        const highGpu = gpu.maxTextureSize >= 8192 && gpu.maxRenderbufferSize >= 8192
-        const constrained = Boolean(saveData || /(^|-)2g|slow-2g/i.test(effectiveType) || (memoryKnown && memory <= 4) || (cores && cores <= 4) || (gpu.maxTextureSize > 0 && gpu.maxTextureSize <= 4096))
-        const strong = !constrained && (highGpu || (cores ?? 0) >= 8 || (memoryKnown && memory >= 8))
+        const model = parseAndroidModel(userAgent)
+        const viewport = window.visualViewport
 
         return {
             isMobile,
             desktop: !isMobile,
-            model: parseAndroidModel(userAgent),
-            platform: navigator.userAgentData?.platform || navigator.platform || '',
-            browser: navigator.userAgentData?.brands?.map((brand) => `${brand.brand} ${brand.version}`).join(', ') || userAgent,
+            model,
+            deviceFamily: classifyDeviceFamily(userAgent, model),
+            platform: uaData?.platform || navigator.platform || '',
+            browser: uaData?.brands?.map((brand) => `${brand.brand} ${brand.version}`).join(', ') || userAgent,
+            architecture: '',
+            bitness: '',
             memory: memoryKnown ? memory : null,
             cores,
             gpu,
@@ -166,14 +202,19 @@ export class Quality
             screen: {
                 width: window.screen?.width ?? 0,
                 height: window.screen?.height ?? 0,
+                viewportWidth: Math.round(viewport?.width ?? window.innerWidth ?? 0),
+                viewportHeight: Math.round(viewport?.height ?? window.innerHeight ?? 0),
                 pixelRatio: window.devicePixelRatio || 1,
                 colorDepth: window.screen?.colorDepth ?? 0,
+                orientation: window.screen?.orientation?.type || '',
+                colorGamut: window.matchMedia?.('(color-gamut: p3)').matches ? 'display-p3' : 'srgb',
             },
             storage: { quota: null, usage: null, available: null },
             battery: { level: null, charging: null },
-            capability: constrained ? 'constrained' : strong ? 'strong' : 'balanced',
-            isConstrained: constrained,
-            isMobileConstrained: isMobile && constrained,
+            tier: 'balanced',
+            capability: 'balanced',
+            isConstrained: false,
+            isMobileConstrained: false,
             refresh: {
                 state: 'waiting',
                 measuredHz: null,
@@ -183,9 +224,43 @@ export class Quality
         }
     }
 
+    evaluateDeviceCapability()
+    {
+        const { gpu, memory, cores, connection, isMobile } = this.device
+        const gpuScore = getGpuScore(gpu)
+        const networkConstrained = Boolean(connection?.saveData || /(^|-)2g|slow-2g/i.test(connection?.effectiveType ?? ''))
+        const memoryConstrained = Number.isFinite(memory) && memory > 0 && memory <= 4
+        const coreConstrained = Number.isFinite(cores) && cores > 0 && cores <= 4
+        const gpuConstrained = gpu.maxTextureSize > 0 && gpu.maxTextureSize <= 4096
+        const constrained = Boolean(networkConstrained || memoryConstrained || coreConstrained || gpuConstrained)
+
+        const cpuStrong = (cores ?? 0) >= 8
+        const memoryStrong = (memory ?? 0) >= 8
+        const highGpu = gpuScore >= 6
+        const ultraGpu = gpuScore >= 8 && gpu.maxTextureSize >= 16384
+
+        let tier = 'balanced'
+        if(constrained)
+            tier = 'low'
+        else if(!isMobile && ultraGpu && cpuStrong && memoryStrong)
+            tier = 'ultra'
+        else if(highGpu || (cpuStrong && memoryStrong))
+            tier = 'high'
+
+        this.device.gpu.score = gpuScore
+        this.device.tier = tier
+        this.device.capability = tier === 'low' ? 'constrained' : tier === 'balanced' ? 'balanced' : 'strong'
+        this.device.isConstrained = constrained
+        this.device.isMobileConstrained = isMobile && constrained
+    }
+
     refreshDeviceFacts()
     {
-        const update = () => this.events.trigger('deviceChange', [ this.device ])
+        const update = () =>
+        {
+            this.evaluateDeviceCapability()
+            this.events.trigger('deviceChange', [ this.device ])
+        }
 
         navigator.storage?.estimate?.()
             ?.then((estimate) =>
@@ -219,7 +294,7 @@ export class Quality
             })
             .catch(() => undefined)
 
-        navigator.userAgentData?.getHighEntropyValues?.([ 'model', 'platform', 'architecture', 'bitness', 'fullVersionList' ])
+        navigator.userAgentData?.getHighEntropyValues?.([ 'model', 'platform', 'platformVersion', 'architecture', 'bitness', 'fullVersionList' ])
             ?.then((details) =>
             {
                 const model = String(details?.model ?? '').trim()
@@ -230,6 +305,10 @@ export class Quality
                 if(platform)
                     this.device.platform = platform
 
+                this.device.architecture = String(details?.architecture ?? '').trim()
+                this.device.bitness = String(details?.bitness ?? '').trim()
+                this.device.deviceFamily = classifyDeviceFamily(navigator.userAgent || '', this.device.model)
+
                 const brands = details?.fullVersionList?.map((brand) => `${brand.brand} ${brand.version}`).join(', ')
                 if(brands)
                     this.device.browser = brands
@@ -237,6 +316,47 @@ export class Quality
                 update()
             })
             .catch(() => undefined)
+
+        // WebGPU adapter identity is not exposed by every browser. When it is
+        // available, keep it as an observed capability; otherwise the WebGL
+        // renderer facts above remain the authoritative fallback.
+        if(!this.device.isMobile && navigator.gpu?.requestAdapter)
+        {
+            navigator.gpu.requestAdapter({ powerPreference: 'high-performance' })
+                .then(async (adapter) =>
+                {
+                    if(!adapter)
+                        return
+
+                    this.device.gpu.webgpu = true
+                    const info = typeof adapter.requestAdapterInfo === 'function'
+                        ? await adapter.requestAdapterInfo().catch(() => null)
+                        : adapter.info ?? null
+                    const adapterName = String(info?.description || info?.device || '').trim()
+                    const adapterVendor = String(info?.vendor || '').trim()
+                    if(adapterName && !this.device.gpu.renderer)
+                        this.device.gpu.renderer = adapterName
+                    if(adapterVendor && !this.device.gpu.vendor)
+                        this.device.gpu.vendor = adapterVendor
+                    update()
+                })
+                .catch(() => undefined)
+        }
+    }
+
+    syncViewportFacts()
+    {
+        const viewport = window.visualViewport
+        this.device.screen = {
+            ...this.device.screen,
+            width: window.screen?.width ?? this.device.screen.width,
+            height: window.screen?.height ?? this.device.screen.height,
+            viewportWidth: Math.round(viewport?.width ?? window.innerWidth ?? this.device.screen.viewportWidth),
+            viewportHeight: Math.round(viewport?.height ?? window.innerHeight ?? this.device.screen.viewportHeight),
+            pixelRatio: window.devicePixelRatio || this.device.screen.pixelRatio || 1,
+            orientation: window.screen?.orientation?.type || (window.innerWidth > window.innerHeight ? 'landscape' : 'portrait'),
+        }
+        this.events.trigger('deviceChange', [ this.device ])
     }
 
     startFrameRateProbe({ delay = 900, force = false } = {})
@@ -267,65 +387,35 @@ export class Quality
         this.device.refresh = {
             ...this.device.refresh,
             state: 'measuring',
-            source: 'Measuring browser requestAnimationFrame cadence',
+            source: 'Measuring live browser requestAnimationFrame cadence',
         }
         this.events.trigger('deviceChange', [ this.device ])
 
-        // The browser does not provide a universal API for a panel's physical
-        // refresh rate. This deliberately measures the rate the browser is
-        // currently allowed to present, which is the only safe FPS limit to use.
-        const renderer = this.game.rendering?.renderer
-        const animationLoop = this.game.rendering?.animationLoop
-        let rendererPaused = false
-
-        try
-        {
-            if(renderer && animationLoop)
-            {
-                renderer.setAnimationLoop(null)
-                rendererPaused = true
-            }
-        }
-        catch(error)
-        {
-            rendererPaused = false
-        }
-
+        // Do not pause the renderer during calibration. A second rAF callback
+        // follows the same browser cadence while the world keeps loading, which
+        // avoids a visible hitch or a false low result from a stopped canvas.
         const intervals = []
         let previous = 0
         let startedAt = 0
-        let warmupFrames = 10
-
-        const restoreRenderer = () =>
-        {
-            if(!rendererPaused || !renderer || !animationLoop || document.visibilityState === 'hidden')
-                return
-
-            try
-            {
-                renderer.setAnimationLoop(animationLoop)
-            }
-            catch(error)
-            {
-                // Visibility recovery will restore the renderer if needed.
-            }
-        }
+        let warmupFrames = 14
 
         const finish = () =>
         {
             this.frameRateProbeRunning = false
-            restoreRenderer()
-
-            const stableIntervals = intervals.filter((interval) => interval >= 3 && interval <= 70)
-            const interval = median(stableIntervals)
+            const stable = intervals
+                .filter((interval) => interval >= 3 && interval <= 70)
+                .sort((a, b) => a - b)
+            const trim = Math.floor(stable.length * 0.12)
+            const samples = stable.slice(trim, stable.length - trim || undefined)
+            const interval = median(samples)
             const rawHz = interval > 0 ? 1000 / interval : 30
             const measuredHz = Math.max(30, canonicalRefreshRate(rawHz))
 
             this.device.refresh = {
                 state: 'ready',
                 measuredHz,
-                samples: stableIntervals.length,
-                source: 'Browser requestAnimationFrame cadence',
+                samples: samples.length,
+                source: 'Live browser requestAnimationFrame cadence',
             }
 
             this.normalizeFpsLimitForLevel(this.level, { persist: true })
@@ -354,7 +444,7 @@ export class Quality
 
             previous = timestamp
 
-            if((intervals.length >= 80 && timestamp - startedAt >= 900) || timestamp - startedAt >= 1500)
+            if((intervals.length >= 100 && timestamp - startedAt >= 1100) || timestamp - startedAt >= 1800)
             {
                 finish()
                 return
@@ -493,16 +583,19 @@ export class Quality
         const cpu = this.device.cores ? `${this.device.cores} logical browser cores` : 'Not exposed by this browser'
         const ram = this.device.memory ? `${this.device.memory} GB browser-reported RAM` : 'Not exposed by this browser'
         const gpu = this.device.gpu.renderer || this.device.gpu.vendor || 'Not exposed by this browser'
-        const screen = `${this.device.screen.width}×${this.device.screen.height} CSS px · ${this.device.screen.pixelRatio}x DPR · ${this.device.screen.colorDepth || 'unknown'}-bit color`
+        const gpuLimits = this.device.gpu.maxTextureSize
+            ? `${this.device.gpu.webgl2 ? 'WebGL2' : 'WebGL'} · max texture ${this.device.gpu.maxTextureSize}px · ${this.device.gpu.webgpu ? 'WebGPU API exposed' : 'WebGPU API not exposed'}`
+            : 'GPU limits not exposed by this browser'
+        const screen = `${this.device.screen.width}×${this.device.screen.height} CSS px · viewport ${this.device.screen.viewportWidth}×${this.device.screen.viewportHeight} · ${this.device.screen.pixelRatio}x DPR · ${this.device.screen.colorGamut}`
         const storage = this.device.storage.quota ? `${humanBytes(this.device.storage.available)} available of ${humanBytes(this.device.storage.quota)}` : 'Not exposed by this browser'
         const battery = this.device.battery.level === null
             ? 'Not exposed by this browser'
             : `${this.device.battery.level}%${this.device.battery.charging ? ' · charging' : ''}`
         const cadence = this.device.refresh?.state === 'ready'
-            ? `${this.getMeasuredRefreshHz()} Hz from ${this.device.refresh.samples} requestAnimationFrame samples`
-            : 'Not calibrated yet'
+            ? `${this.getMeasuredRefreshHz()} Hz from ${this.device.refresh.samples} live requestAnimationFrame samples`
+            : 'Calibration is running'
 
-        return `Model: ${model}. Platform: ${platform}. CPU: ${cpu}. RAM: ${ram}. GPU: ${gpu}. Screen: ${screen}. Browser cadence: ${cadence}. Storage: ${storage}. Battery: ${battery}. This profile uses only browser-exposed values; unavailable physical chipset, RAM or panel information is not guessed.`
+        return `Model: ${model}. Device family: ${this.device.deviceFamily}. Platform: ${platform}. CPU: ${cpu}. RAM: ${ram}. GPU: ${gpu}. GPU capability: ${gpuLimits}. Screen: ${screen}. Browser cadence: ${cadence}. Storage: ${storage}. Battery: ${battery}. Selected device tier: ${this.device.tier}. This profile uses only browser-exposed values; unavailable chipset, RAM or physical-panel information is not guessed.`
     }
 
     getInitialLevel()
@@ -511,8 +604,13 @@ export class Quality
         if(VALID_LEVELS.has(savedLevel))
             return savedLevel
 
-        // First launch starts on Medium so every device opens on the balanced
-        // full-content presentation before the player decides to switch.
+        // First launch chooses a real device profile from browser-exposed GPU,
+        // CPU, memory and network facts. It does not guess a preset from a
+        // phone brand or model name.
+        if(this.device.isConstrained)
+            return QUALITY_LEVELS.LOW
+        if(this.device.capability === 'strong')
+            return QUALITY_LEVELS.HIGH
         return QUALITY_LEVELS.MEDIUM
     }
 
@@ -575,7 +673,7 @@ export class Quality
             // some mobile browsers transcode KTX textures.
             ...lowTextureProfile,
             compressedAssets: true,
-            description: 'Phase 10 optimized: the lightweight mobile profile with the same gameplay, save, missions, weather, season, and accessibility systems, now tuned for better stability on phones.',
+            description: 'Phase 10 optimized: the lightweight mobile profile with the same driving world, save, weather, season, and accessibility systems, now tuned for better stability on phones.',
         }
     }
 
@@ -660,12 +758,12 @@ export class Quality
             return {
                 level,
                 name: 'Medium',
-                pixelRatioLimit: isMobile ? (isConstrained ? 1.05 : 1.2) : 1.45,
-                pixelRatioFloor: isMobile ? 0.68 : 0.82,
-                renderScaleInitial: isMobile ? 1.03 : 1,
-                renderScaleMin: isMobile ? 0.74 : 0.8,
-                renderScaleMax: isMobile ? 1.08 : 1.2,
-                maxRenderPixels: isMobile ? (isConstrained ? 1800000 : 2500000) : 4300000,
+                pixelRatioLimit: isMobile ? (isConstrained ? 1.1 : this.device.tier === 'high' ? 1.65 : 1.45) : 1.45,
+                pixelRatioFloor: isMobile ? (isConstrained ? 0.72 : 0.82) : 0.82,
+                renderScaleInitial: isMobile ? (isConstrained ? 1 : 1.08) : 1,
+                renderScaleMin: isMobile ? (isConstrained ? 0.74 : 0.84) : 0.8,
+                renderScaleMax: isMobile ? (isConstrained ? 1.08 : 1.2) : 1.2,
+                maxRenderPixels: isMobile ? (isConstrained ? 2000000 : this.device.tier === 'high' ? 3600000 : 2900000) : 4300000,
                 adaptiveResolution: true,
                 targetFrameTime: isMobile ? 21 : 19,
                 bloomMips: isMobile ? 3 : 4,
@@ -692,12 +790,12 @@ export class Quality
             return {
                 level,
                 name: 'High',
-                pixelRatioLimit: isConstrained ? 1.18 : 1.45,
-                pixelRatioFloor: isConstrained ? 0.78 : 0.9,
-                renderScaleInitial: isConstrained ? 1.06 : 1.12,
-                renderScaleMin: isConstrained ? 0.86 : 0.92,
-                renderScaleMax: isConstrained ? 1.16 : 1.25,
-                maxRenderPixels: isConstrained ? 2600000 : 4200000,
+                pixelRatioLimit: isConstrained ? 1.25 : this.device.tier === 'high' ? 2.1 : 1.75,
+                pixelRatioFloor: isConstrained ? 0.84 : this.device.tier === 'high' ? 1.08 : 0.96,
+                renderScaleInitial: isConstrained ? 1.06 : this.device.tier === 'high' ? 1.18 : 1.12,
+                renderScaleMin: isConstrained ? 0.86 : this.device.tier === 'high' ? 1 : 0.94,
+                renderScaleMax: isConstrained ? 1.16 : this.device.tier === 'high' ? 1.3 : 1.22,
+                maxRenderPixels: isConstrained ? 2800000 : this.device.tier === 'high' ? 6200000 : 4600000,
                 adaptiveResolution: true,
                 targetFrameTime: isConstrained ? 21.5 : 18.5,
                 bloomMips: isConstrained ? 3 : 4,
@@ -856,7 +954,7 @@ export class Quality
         const numericLimit = Number(limit)
         const nextLimit = allowed.includes(numericLimit)
             ? numericLimit
-            : this.getRecommendedFpsLimit(this.level)
+            : AUTO_FPS_LIMIT
         if(nextLimit === this.getFpsLimit())
             return
 
@@ -878,7 +976,7 @@ export class Quality
         const saved = Number(this.game.save?.get('settings.fpsLimit', AUTO_FPS_LIMIT))
         const next = allowed.includes(saved)
             ? saved
-            : this.getRecommendedFpsLimit(level)
+            : AUTO_FPS_LIMIT
 
         if(persist && this.game.save)
             this.game.save.set('settings.fpsLimit', next, { immediate: true })

@@ -51,9 +51,6 @@ import { Haptics } from './Haptics.js'
 import { Tutorial } from './Tutorial.js'
 import { Pause } from './Pause.js'
 import { VisualEffects } from './VisualEffects.js'
-import { Missions } from './Missions.js'
-import { Garage } from './Garage.js'
-import { DailyRewards } from './DailyRewards.js'
 import { SocialShare } from './SocialShare.js'
 import { ControllerStatus } from './ControllerStatus.js'
 
@@ -110,10 +107,15 @@ export class Game
         this.pwa?.attachGame(this)
         this.rayCursor = new RayCursor()
         this.viewport = new Viewport(this.domElement)
+        this.viewport.events.on('change', () => this.quality.syncViewportFacts())
         this.modals = new Modals()
         this.menu = new Menu()
         this.rendering = new Rendering()
         await this.rendering.setRenderer()
+        // Calibrate browser cadence while the startup screen is still visible.
+        // This uses actual requestAnimationFrame delivery instead of guessing a
+        // phone panel refresh rate from the model name.
+        this.quality.startFrameRateProbe({ delay: 180, force: true })
         this.startupScreen?.setStage('Loading the starting area')
         this.startupScreen?.setProgress(18)
 
@@ -234,9 +236,6 @@ export class Game
         this.map = new Map()
         this.title = new Title()
         this.pause = new Pause()
-        this.missions = new Missions()
-        this.dailyRewards = new DailyRewards()
-        this.garage = new Garage()
         this.socialShare = new SocialShare()
         this.controllerStatus = new ControllerStatus()
         this.tutorial = new Tutorial()
@@ -249,7 +248,7 @@ export class Game
         // Probe the browser/display cadence after the loading work has settled.
         // This keeps the FPS menu tied to what the current device can actually
         // present, rather than a generic hardware guess.
-        this.quality.startFrameRateProbe({ delay: 900 })
+        this.quality.startFrameRateProbe({ delay: 700, force: true })
 
         // Pre-render if quality high
         if(this.quality.level === 0 && this.rendering.renderer.backend.isWebGPUBackend)

@@ -41,7 +41,7 @@ if(existsSync(dist))
         assert(existsSync(join(dist, asset)), `Missing production runtime asset: ${asset}`)
 
     const worker = readFileSync(join(dist, 'sw.js'), 'utf8')
-    assert(worker.includes('4x4-coukoo-v1.14.1'), 'Production service worker cache version is stale')
+    assert(worker.includes('4x4-coukoo-v1.15.0'), 'Production service worker cache version is stale')
 }
 
 if(failures.length)

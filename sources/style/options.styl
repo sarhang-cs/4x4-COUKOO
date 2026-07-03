@@ -241,3 +241,24 @@
 
         &__actions .button
             min-height 46px
+
+// Picker panels stay fully scrollable inside short Safari and Android browser
+// viewports, including devices with gesture/home-indicator safe areas.
+.settings-picker
+    padding-top calc(14px + var(--coukoo-safe-top))
+    padding-right calc(14px + var(--coukoo-safe-right))
+    padding-bottom calc(14px + var(--coukoo-safe-bottom))
+    padding-left calc(14px + var(--coukoo-safe-left))
+
+    &__panel
+        max-height @css{ calc(var(--coukoo-vh) - 28px - var(--coukoo-safe-top) - var(--coukoo-safe-bottom)) }
+        overflow-y auto
+        overscroll-behavior contain
+        -webkit-overflow-scrolling touch
+
+    @media only screen and (max-width 520px)
+        &__options
+            gap 8px
+
+        &__option
+            padding 12px 13px

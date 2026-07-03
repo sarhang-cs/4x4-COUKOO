@@ -1,7 +1,7 @@
 import { Events } from './Events.js'
 
 const STORAGE_KEY = '4x4-coukoo-save-v1'
-const SAVE_VERSION = 5
+const SAVE_VERSION = 6
 
 const now = () => Date.now()
 
@@ -154,19 +154,6 @@ export class Save
                 achievementsTimeEnd: 0,
                 achievementReward: null,
                 tutorialCompleted: false,
-                coins: 0,
-                totalCoins: 0,
-                missions: {},
-                vehicles: {
-                    default: true,
-                    oldSchool: false,
-                },
-                activeVehicle: 'default',
-                dailyReward: {
-                    lastClaimDay: null,
-                    streak: 0,
-                    totalClaims: 0,
-                },
                 circuit: {
                     bestTimeMs: 0,
                     lastTimeMs: 0,
@@ -232,22 +219,16 @@ export class Save
             ? normalized.progress.achievementReward.slice(0, 120)
             : null
         normalized.progress.tutorialCompleted = normalized.progress.tutorialCompleted === true
-        normalized.progress.coins = Math.floor(toFiniteNumber(normalized.progress.coins))
-        normalized.progress.totalCoins = Math.max(normalized.progress.coins, Math.floor(toFiniteNumber(normalized.progress.totalCoins)))
-        normalized.progress.missions = isPlainObject(normalized.progress.missions) ? normalized.progress.missions : {}
-        normalized.progress.vehicles = {
-            default: true,
-            oldSchool: normalized.progress.vehicles?.oldSchool === true,
-        }
-        normalized.progress.activeVehicle = [ 'default', 'oldSchool' ].includes(normalized.progress.activeVehicle)
-            ? normalized.progress.activeVehicle
-            : 'default'
-        if(normalized.progress.activeVehicle === 'oldSchool' && !normalized.progress.vehicles.oldSchool)
-            normalized.progress.activeVehicle = 'default'
-        normalized.progress.dailyReward = isPlainObject(normalized.progress.dailyReward) ? normalized.progress.dailyReward : {}
-        normalized.progress.dailyReward.lastClaimDay = toDayKey(normalized.progress.dailyReward.lastClaimDay)
-        normalized.progress.dailyReward.streak = Math.min(7, Math.floor(toFiniteNumber(normalized.progress.dailyReward.streak)))
-        normalized.progress.dailyReward.totalClaims = Math.floor(toFiniteNumber(normalized.progress.dailyReward.totalClaims))
+
+        // v6 removes the former Coukoo Garage currency, daily reward and
+        // mission economy from the root game. Keep no stale values in the
+        // persisted profile after the migration.
+        delete normalized.progress.coins
+        delete normalized.progress.totalCoins
+        delete normalized.progress.missions
+        delete normalized.progress.vehicles
+        delete normalized.progress.activeVehicle
+        delete normalized.progress.dailyReward
         normalized.progress.circuit = isPlainObject(normalized.progress.circuit) ? normalized.progress.circuit : {}
         normalized.progress.circuit.bestTimeMs = toCircuitTime(normalized.progress.circuit.bestTimeMs)
         normalized.progress.circuit.lastTimeMs = toCircuitTime(normalized.progress.circuit.lastTimeMs)

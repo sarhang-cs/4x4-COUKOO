@@ -1,6 +1,6 @@
 import * as THREE from 'three/webgpu'
 import { Game } from '../Game.js'
-import { atan, float, Fn, PI, PI2, positionGeometry, texture, uniform, uv, vec2, vec3, vec4 } from 'three/tsl'
+import { atan, float, Fn, PI, PI2, positionGeometry, texture, uniform, uv, vec3, vec4 } from 'three/tsl'
 import gsap from 'gsap'
 import { Inputs } from '../Inputs/Inputs.js'
 
@@ -117,63 +117,92 @@ export class Intro
     {
         this.text = {}
 
-        // Keep the original in-world start prompt. The PNG files have the same
-        // artwork as the original prompt assets, but their browser orientation
-        // is stable across mobile GPUs. The only visual correction here is the
-        // vertical UV direction so “Tap to start” stays upright.
-        const scale = 1.3
-        const geometry = new THREE.PlaneGeometry(2 * scale, 1 * scale)
+        // Geometry
+        const scale = 1.22
+        const geometry = new THREE.PlaneGeometry(2.22 * scale, 1.16 * scale)
+
+        // Material
         const material = new THREE.MeshBasicNodeMaterial({
             transparent: true
         })
-        const mesh = new THREE.Mesh(geometry, material)
-        mesh.visible = false
-        this.label.add(mesh)
 
-        this.text.mesh = mesh
-        this.text.textures = new Map()
-        this.text.updateTexture = () =>
+        const applyTextureToMaterial = (labelTexture) =>
         {
+            material.outputNode = Fn(() =>
+            {
+                texture(labelTexture, uv()).r.lessThan(0.5).discard()
+                return vec4(1)
+            })()
+            material.needsUpdate = true
+            mesh.visible = true
+        }
+
+        // Texture
+        this.text.textures = new Map()
+        this.text.layouts = {
+            mouseKeyboard: { x: 0, y: 0.08, scaleX: 1, scaleY: 1 },
+            gamepadXbox: { x: 0, y: 0.08, scaleX: 1, scaleY: 1 },
+            gamepadPlaystation: { x: 0, y: 0.08, scaleX: 1, scaleY: 1 },
+            touch: { x: 0.06, y: 0.1, scaleX: 0.96, scaleY: 0.96 },
+        }
+        this.text.applyLayout = (name) =>
+        {
+            const layout = this.text.layouts[name] ?? this.text.layouts.mouseKeyboard
+            mesh.position.set(layout.x, layout.y, 0)
+            mesh.scale.set(layout.scaleX, layout.scaleY, 1)
+        }
+        this.text.updateTexture = async () =>
+        {
+            // Define name
             let name = 'mouseKeyboard'
 
             if(this.game.inputs.mode === Inputs.MODE_GAMEPAD)
-                name = this.game.inputs.gamepad.type === 'xbox' ? 'gamepadXbox' : 'gamepadPlaystation'
+            {
+                if(this.game.inputs.gamepad.type === 'xbox')
+                    name = 'gamepadXbox'
+                else
+                    name = 'gamepadPlaystation'
+            }
             else if(this.game.inputs.mode === Inputs.MODE_TOUCH)
+            {
                 name = 'touch'
-
-            const applyTexture = (labelTexture) =>
-            {
-                // TextureLoader already supplies the browser image in the
-                // correct vertical orientation. Do not flip the V coordinate.
-                material.outputNode = Fn(() =>
-                {
-                    texture(labelTexture, uv()).r.lessThan(0.5).discard()
-                    return vec4(1)
-                })()
-                material.needsUpdate = true
-                mesh.visible = true
             }
 
-            const cachedTexture = this.text.textures.get(name)
-            if(cachedTexture)
-            {
-                applyTexture(cachedTexture)
-                return
-            }
+            this.text.applyLayout(name)
 
-            const loader = this.game.resourcesLoader.getLoader('texture')
-            loader.load(`intro/${name}Label.png`, (loadedTexture) =>
+            // Load, set and save texture
+            let cachedTexture = this.text.textures.get(name)
+            if(!cachedTexture)
             {
-                loadedTexture.generateMipmaps = false
-                loadedTexture.colorSpace = THREE.SRGBColorSpace
-                loadedTexture.needsUpdate = true
-                this.text.textures.set(name, loadedTexture)
-                applyTexture(loadedTexture)
-            })
+                const loader = this.game.resourcesLoader.getLoader('texture')
+                const resourcePath = `intro/${name}Label.png`
+                loader.load(
+                    resourcePath,
+                    (loadedTexture) =>
+                    {
+                        loadedTexture.generateMipmaps = false
+                        loadedTexture.colorSpace = THREE.SRGBColorSpace
+                        loadedTexture.needsUpdate = true
+                        this.text.textures.set(name, loadedTexture)
+                        applyTextureToMaterial(loadedTexture)
+                    }
+                )
+            }
+            else
+            {
+                applyTextureToMaterial(cachedTexture)
+            }
         }
 
         this.game.inputs.gamepad.events.on('typeChange', this.text.updateTexture)
         this.game.inputs.events.on('modeChange', this.text.updateTexture)
+
+        const mesh = new THREE.Mesh(geometry, material)
+        mesh.visible = false
+
+        this.label.add(mesh)
+
+        this.text.mesh = mesh
         this.text.updateTexture()
     }
 
@@ -254,12 +283,6 @@ export class Intro
                 }
             }
         )
-
-        requestAnimationFrame(() =>
-        {
-            this.text.element?.classList.add('is-visible')
-            this.text.element?.setAttribute('aria-hidden', 'false')
-        })
     }
 
     hideLabel()
@@ -279,7 +302,7 @@ export class Intro
                 },
                 onComplete: () =>
                 {
-                    this.text.element?.remove()
+                    this.text.mesh.removeFromParent()
                     this.soundButton.mesh.removeFromParent()
                     this.game.rayCursor.removeIntersect(this.soundButton.intersect)
                 }
@@ -304,18 +327,24 @@ export class Intro
         // Geometries
         this.circle.mesh.geometry.dispose()
         this.soundButton.mesh.geometry.dispose()
+        this.text.mesh.geometry.dispose()
 
         // Materials
         this.circle.mesh.material.dispose()
         this.soundButton.mesh.material.dispose()
+        this.text.mesh.material.dispose()
 
         // Textures
         this.game.resources.soundTexture.dispose()
-        this.text.element?.remove()
 
+        this.text.textures.forEach((value, key) =>
+        {
+            value.dispose()
+        })
+        
         // Events
         this.game.ticker.events.off('tick', this.update)
-        this.game.inputs.gamepad.events.off('typeChange', this.text.updateLabel)
-        this.game.inputs.events.off('modeChange', this.text.updateLabel)
+        this.game.inputs.gamepad.events.off('typeChange', this.text.updateTexture)
+        this.game.inputs.events.off('modeChange', this.text.updateTexture)
     }
 }

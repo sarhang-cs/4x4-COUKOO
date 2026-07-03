@@ -251,7 +251,7 @@ export class Rendering
             return
 
         const elapsed = this.game.ticker.elapsed
-        if(elapsed < 5 || elapsed - this.performance.lastAdjustmentElapsed < 2.5)
+        if(elapsed < 5 || elapsed - this.performance.lastAdjustmentElapsed < 3.5)
             return
 
         const frameTime = (this.game.ticker.deltaAverage ?? this.game.ticker.delta) * 1000
@@ -272,7 +272,7 @@ export class Rendering
 
             if(this.performance.slowWindows >= 2 && this.renderScale > profile.renderScaleMin)
             {
-                this.renderScale = Math.max(profile.renderScaleMin, this.renderScale - 0.08)
+                this.renderScale = Math.max(profile.renderScaleMin, this.renderScale - 0.045)
                 this.performance.slowWindows = 0
                 this.applyPixelRatio()
             }
@@ -287,7 +287,7 @@ export class Rendering
 
             if(this.performance.fastWindows >= 3 && this.renderScale < profile.renderScaleMax)
             {
-                this.renderScale = Math.min(profile.renderScaleMax, this.renderScale + 0.05)
+                this.renderScale = Math.min(profile.renderScaleMax, this.renderScale + 0.03)
                 this.performance.fastWindows = 0
                 this.applyPixelRatio()
             }
@@ -401,7 +401,7 @@ export class Rendering
 
         const elapsed = clamp(timestamp - this.lastRenderTimestamp, 0, 250)
         this.lastRenderTimestamp = timestamp
-        this.frameAccumulator = Math.min(interval * 2.5, this.frameAccumulator + elapsed)
+        this.frameAccumulator = Math.min(interval * 1.5, this.frameAccumulator + elapsed)
 
         if(this.frameAccumulator + 0.1 < interval)
             return false

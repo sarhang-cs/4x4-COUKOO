@@ -406,3 +406,110 @@
 
                         .is-mode-gamepad.is-gamepad-xbox &
                             display block
+
+// Responsive menu hardening for iPhone/Safari, Galaxy, Redmi/Xiaomi, Vivo and
+// desktop browsers. Brand classes are only layout hints; the visual viewport
+// and safe-area values remain the actual source of screen dimensions.
+.menu
+    .inner
+        min-height 0
+
+    .container
+        min-height 0
+
+    .previews
+    .contents
+        min-height 0
+
+    .contents
+        .content
+            width 100%
+            min-height 0
+            overscroll-behavior-y contain
+            -webkit-overflow-scrolling touch
+            touch-action pan-y
+            scrollbar-gutter stable
+
+        .content-inner
+            width 100%
+            max-width 520px
+            min-height min-content
+            padding-bottom calc(34px + var(--coukoo-safe-bottom))
+
+@media only screen and (orientation portrait)
+    .menu
+        .inner
+            top calc(48px + var(--coukoo-safe-top))
+            width @css{ min(640px, calc(100% - 20px - var(--coukoo-safe-left) - var(--coukoo-safe-right))) }
+            height @css{ calc(var(--coukoo-vh) - 62px - var(--coukoo-safe-top) - var(--coukoo-safe-bottom)) }
+            max-height none
+
+        .navigation
+            left calc(10px + var(--coukoo-safe-left))
+            right calc(54px + var(--coukoo-safe-right))
+            max-width none
+            overflow-x auto
+            overscroll-behavior-x contain
+            scrollbar-width none
+
+            &::-webkit-scrollbar
+                display none
+
+            .item
+                flex 0 0 auto
+                width clamp(40px, 11.5vw, 50px)
+
+        .close
+            right calc(10px + var(--coukoo-safe-right))
+
+        .container
+            min-height 0
+
+        .previews
+            height clamp(136px, 25%, 210px)
+            flex 0 0 auto
+
+        .contents
+            height auto
+            flex 1 1 auto
+            min-height 0
+
+            .content
+                inset 0
+                padding-bottom 0
+
+            .content-inner
+                width 100%
+                padding-right clamp(16px, 5vw, 28px)
+                padding-left clamp(16px, 5vw, 28px)
+                padding-bottom calc(30px + var(--coukoo-safe-bottom))
+
+html.is-ios .menu .contents .content
+    // Required for momentum scrolling inside an absolutely positioned panel.
+    overflow-y scroll
+
+html.is-ios.is-compact-height .menu .previews
+    height 122px
+
+html.is-ios.is-compact-height .menu .contents
+    height calc(100% - 122px)
+
+html.is-samsung.is-tall-phone .menu .previews
+html.is-xiaomi.is-tall-phone .menu .previews
+html.is-vivo.is-tall-phone .menu .previews
+    height clamp(144px, 23%, 205px)
+
+@media only screen and (max-width 390px)
+    .menu
+        .inner
+            width @css{ calc(100% - 12px - var(--coukoo-safe-left) - var(--coukoo-safe-right)) }
+
+        .navigation
+            left calc(4px + var(--coukoo-safe-left))
+
+        .close
+            right calc(4px + var(--coukoo-safe-right))
+
+        .contents .content-inner
+            padding-right 14px
+            padding-left 14px
